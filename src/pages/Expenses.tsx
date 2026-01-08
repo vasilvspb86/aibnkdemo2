@@ -113,6 +113,9 @@ export default function Expenses() {
     });
   };
 
+  // Filter pending expenses for approval queue
+  const pendingExpenses = expenses?.filter((expense) => expense.status === "pending") || [];
+
   const filteredExpenses = expenses?.filter((expense) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -298,6 +301,84 @@ export default function Expenses() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Pending Approvals Section */}
+      {pendingExpenses.length > 0 && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Pending Approvals</CardTitle>
+                  <CardDescription>
+                    {pendingExpenses.length} expense{pendingExpenses.length > 1 ? "s" : ""} awaiting approval
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+                {pendingExpenses.length} pending
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingExpenses.map((expense) => (
+                <div 
+                  key={expense.id} 
+                  className="flex items-center justify-between p-4 rounded-lg bg-background border"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                      <Receipt className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{expense.description}</p>
+                        {expense.receipt_url && (
+                          <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {expense.category} • {formatExpenseDate(expense.expense_date)}
+                        {expense.vendor && ` • ${expense.vendor}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className="font-semibold text-lg">
+                      {expense.currency} {Number(expense.amount).toLocaleString()}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleStatusChange(expense, "rejected")}
+                        disabled={updateExpenseStatus.isPending}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                        onClick={() => handleStatusChange(expense, "approved")}
+                        disabled={updateExpenseStatus.isPending}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Expense List */}
