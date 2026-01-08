@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { ThemeProvider } from "@/hooks/use-theme";
 // Pages
 import Landing from "./pages/Landing";
 import SignIn from "./pages/SignIn";
@@ -28,36 +28,38 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/onboarding/status" element={<OnboardingStatus />} />
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding/status" element={<OnboardingStatus />} />
 
-          {/* App Routes with Sidebar */}
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/accounts" element={<Accounts />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/cards" element={<Cards />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/credit" element={<Credit />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/assistant" element={<Assistant />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+            {/* App Routes with Sidebar */}
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/cards" element={<Cards />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/credit" element={<Credit />} />
+              <Route path="/rewards" element={<Rewards />} />
+              <Route path="/assistant" element={<Assistant />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
