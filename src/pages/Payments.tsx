@@ -34,8 +34,17 @@ import {
   XCircle,
   Building,
   User,
-  Loader2
+  Loader2,
+  Pencil,
+  MoreHorizontal
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePaymentsData, formatPaymentDate } from "@/hooks/use-payments-data";
 import { toast } from "sonner";
 
@@ -43,6 +52,8 @@ export default function Payments() {
   const [isPayoutOpen, setIsPayoutOpen] = useState(false);
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [isBeneficiaryOpen, setIsBeneficiaryOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<any>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   
   // Payment form state
@@ -70,6 +81,9 @@ export default function Payments() {
     createPayment,
     createPaymentLink,
     createBeneficiary,
+    updatePayment,
+    approvePayment,
+    cancelPayment,
   } = usePaymentsData();
 
   const copyLink = (linkCode: string) => {
@@ -143,6 +157,60 @@ export default function Payments() {
     setBeneficiaryType("");
     setIsBeneficiaryOpen(false);
   };
+
+  const handleEditPayment = (payment: any) => {
+    setEditingPayment(payment);
+    setSelectedBeneficiary(payment.beneficiary_id || "");
+    setPaymentAmount(String(payment.amount));
+    setPaymentCurrency(payment.currency);
+    setPaymentReference(payment.reference || "");
+    setPaymentPurpose(payment.purpose || "");
+    setIsEditOpen(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editingPayment) return;
+    
+    await updatePayment.mutateAsync({
+      id: editingPayment.id,
+      beneficiary_id: selectedBeneficiary || undefined,
+      amount: parseFloat(paymentAmount),
+      currency: paymentCurrency,
+      reference: paymentReference,
+      purpose: paymentPurpose,
+    });
+    
+    setIsEditOpen(false);
+    setEditingPayment(null);
+    resetPaymentForm();
+  };
+
+  const handleSubmitForApproval = async (paymentId: string) => {
+    await updatePayment.mutateAsync({
+      id: paymentId,
+      status: "pending_approval",
+    });
+  };
+
+  const handleApprovePayment = async (paymentId: string) => {
+    await approvePayment.mutateAsync(paymentId);
+  };
+
+  const handleCancelPayment = async (paymentId: string) => {
+    await cancelPayment.mutateAsync(paymentId);
+  };
+
+  const resetPaymentForm = () => {
+    setSelectedBeneficiary("");
+    setPaymentAmount("");
+    setPaymentCurrency("AED");
+    setPaymentReference("");
+    setPaymentPurpose("");
+  };
+
+  // Filter payments by status for the pending approvals section
+  const pendingApprovalPayments = payments?.filter(p => p.status === "pending_approval") || [];
+  const draftPayments = payments?.filter(p => p.status === "draft") || [];
 
   const StatusBadge = ({ status }: { status: string }) => {
     const config: Record<string, { icon: any; className: string }> = {
@@ -323,6 +391,99 @@ export default function Payments() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Edit Payment Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Payment</DialogTitle>
+              <DialogDescription>
+                Update the payment details before submitting.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Beneficiary *</Label>
+                <Select value={selectedBeneficiary} onValueChange={setSelectedBeneficiary}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select beneficiary" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {beneficiaries?.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        <div className="flex items-center gap-2">
+                          {b.vendor_type === "Employee" ? (
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          {b.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Amount *</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="0.00"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Currency</Label>
+                  <Select value={paymentCurrency} onValueChange={setPaymentCurrency}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AED">AED</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Reference</Label>
+                <Input 
+                  placeholder="e.g., Invoice payment"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Purpose *</Label>
+                <Select value={paymentPurpose} onValueChange={setPaymentPurpose}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select purpose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="supplier">Supplier Payment</SelectItem>
+                    <SelectItem value="salary">Salary/Wages</SelectItem>
+                    <SelectItem value="services">Professional Services</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+              <Button 
+                className="gradient-primary" 
+                onClick={handleUpdatePayment}
+                disabled={updatePayment.isPending}
+              >
+                {updatePayment.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="history" className="space-y-4">
@@ -341,11 +502,151 @@ export default function Payments() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="space-y-4">
+          {/* Pending Approvals Section */}
+          {pendingApprovalPayments.length > 0 && (
+            <Card className="border-warning/30 bg-warning/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-warning" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Pending Approval</CardTitle>
+                    <CardDescription>
+                      {pendingApprovalPayments.length} payment{pendingApprovalPayments.length > 1 ? "s" : ""} awaiting your approval
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pendingApprovalPayments.map((payment) => (
+                    <div 
+                      key={payment.id} 
+                      className="flex items-center justify-between p-4 rounded-lg bg-background border"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                          <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {(payment as any).beneficiary?.name || "Unknown Beneficiary"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {payment.purpose || payment.reference || "Payment"} • {formatPaymentDate(payment.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-semibold text-lg">
+                          {payment.currency} {Number(payment.amount).toLocaleString()}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleCancelPayment(payment.id)}
+                            disabled={cancelPayment.isPending}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                            onClick={() => handleApprovePayment(payment.id)}
+                            disabled={approvePayment.isPending}
+                          >
+                            {approvePayment.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4 mr-1" />
+                            )}
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Draft Payments Section */}
+          {draftPayments.length > 0 && (
+            <Card className="border-muted">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                    <Pencil className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Draft Payments</CardTitle>
+                    <CardDescription>
+                      {draftPayments.length} draft{draftPayments.length > 1 ? "s" : ""} ready to submit
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {draftPayments.map((payment) => (
+                    <div 
+                      key={payment.id} 
+                      className="flex items-center justify-between p-4 rounded-lg bg-background border"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                          <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {(payment as any).beneficiary?.name || "Unknown Beneficiary"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {payment.purpose || payment.reference || "Payment"} • {formatPaymentDate(payment.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-semibold text-lg">
+                          {payment.currency} {Number(payment.amount).toLocaleString()}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleEditPayment(payment)}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="gradient-primary"
+                            onClick={() => handleSubmitForApproval(payment.id)}
+                            disabled={updatePayment.isPending}
+                          >
+                            Submit for Approval
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* All Payments */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Payments</CardTitle>
-              <CardDescription>Outgoing payments from your account</CardDescription>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription>All outgoing payments from your account</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -387,6 +688,45 @@ export default function Payments() {
                       <div className="flex items-center gap-4">
                         <p className="font-semibold">{payment.currency} {Number(payment.amount).toLocaleString()}</p>
                         <StatusBadge status={payment.status} />
+                        {(payment.status === "draft" || payment.status === "pending_approval") && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {payment.status === "draft" && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleEditPayment(payment)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleSubmitForApproval(payment.id)}>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Submit for Approval
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {payment.status === "pending_approval" && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleApprovePayment(payment.id)}>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleCancelPayment(payment.id)}
+                                className="text-destructive"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
                   ))
