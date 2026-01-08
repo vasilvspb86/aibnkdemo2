@@ -1,26 +1,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowUpRight, 
   ArrowDownLeft, 
   TrendingUp, 
   CreditCard, 
   FileText, 
-  Plus,
   ArrowRight,
   Building2,
   Sparkles
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const recentTransactions = [
-  { id: 1, description: "Payment from Client A", amount: 12500, type: "credit", date: "Today", category: "Invoice" },
-  { id: 2, description: "AWS Cloud Services", amount: -2340, type: "debit", date: "Today", category: "Software" },
-  { id: 3, description: "Salary - John Doe", amount: -8500, type: "debit", date: "Yesterday", category: "Payroll" },
-  { id: 4, description: "Payment from Client B", amount: 5600, type: "credit", date: "Yesterday", category: "Invoice" },
-  { id: 5, description: "Office Supplies", amount: -450, type: "debit", date: "2 days ago", category: "Operations" },
-];
+import { useDashboardData, formatRelativeTime } from "@/hooks/use-dashboard-data";
 
 const quickActions = [
   { label: "Send Money", icon: ArrowUpRight, path: "/payments", color: "bg-primary" },
@@ -30,12 +23,25 @@ const quickActions = [
 ];
 
 export default function Dashboard() {
+  const { 
+    account, 
+    transactions, 
+    transactionSummary, 
+    pendingInvoices, 
+    organization,
+    isLoading 
+  } = useDashboardData();
+
+  const companyName = organization?.name?.split(" ")[0] || "there";
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold">Good morning, Acme</h1>
+          <h1 className="text-2xl md:text-3xl font-display font-bold">
+            Good {getTimeOfDay()}, {companyName}
+          </h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your business today.</p>
         </div>
         <Link to="/assistant">
@@ -70,11 +76,19 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-display font-bold">AED 142,580</p>
-            <p className="text-xs text-accent flex items-center gap-1 mt-1">
-              <ArrowUpRight className="h-3 w-3" />
-              +12.5% from last month
-            </p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <>
+                <p className="text-2xl font-display font-bold">
+                  AED {Number(account?.balance || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-accent flex items-center gap-1 mt-1">
+                  <ArrowUpRight className="h-3 w-3" />
+                  +12.5% from last month
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -84,8 +98,18 @@ export default function Dashboard() {
             <ArrowDownLeft className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-display font-bold">AED 45,200</p>
-            <p className="text-xs text-muted-foreground mt-1">8 transactions</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <>
+                <p className="text-2xl font-display font-bold">
+                  AED {(transactionSummary?.incomingTotal || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactionSummary?.incomingCount || 0} transactions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -95,8 +119,18 @@ export default function Dashboard() {
             <ArrowUpRight className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-display font-bold">AED 28,750</p>
-            <p className="text-xs text-muted-foreground mt-1">23 transactions</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <>
+                <p className="text-2xl font-display font-bold">
+                  AED {(transactionSummary?.outgoingTotal || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactionSummary?.outgoingCount || 0} transactions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -106,8 +140,18 @@ export default function Dashboard() {
             <FileText className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-display font-bold">AED 18,600</p>
-            <p className="text-xs text-warning mt-1">3 invoices awaiting payment</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <>
+                <p className="text-2xl font-display font-bold">
+                  AED {(pendingInvoices?.total || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-warning mt-1">
+                  {pendingInvoices?.count || 0} invoices awaiting payment
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -143,31 +187,57 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                    tx.type === "credit" ? "bg-accent/10" : "bg-muted"
-                  }`}>
-                    {tx.type === "credit" ? (
-                      <ArrowDownLeft className="h-5 w-5 text-accent" />
-                    ) : (
-                      <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                    )}
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div>
+                      <Skeleton className="h-4 w-40 mb-1" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">{tx.description}</p>
-                    <p className="text-xs text-muted-foreground">{tx.date} • {tx.category}</p>
-                  </div>
+                  <Skeleton className="h-5 w-24" />
                 </div>
-                <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
-                  {tx.type === "credit" ? "+" : ""}AED {Math.abs(tx.amount).toLocaleString()}
-                </p>
-              </div>
-            ))}
+              ))
+            ) : transactions && transactions.length > 0 ? (
+              transactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                      tx.type === "credit" ? "bg-accent/10" : "bg-muted"
+                    }`}>
+                      {tx.type === "credit" ? (
+                        <ArrowDownLeft className="h-5 w-5 text-accent" />
+                      ) : (
+                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{tx.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatRelativeTime(tx.created_at)} • {tx.category || "General"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
+                    {tx.type === "credit" ? "+" : "-"}AED {Number(tx.amount).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No transactions yet</p>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   );
+}
+
+function getTimeOfDay(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "morning";
+  if (hour < 17) return "afternoon";
+  return "evening";
 }
