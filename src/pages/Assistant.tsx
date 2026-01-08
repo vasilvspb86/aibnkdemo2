@@ -6,7 +6,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Send, 
   Sparkles, 
-  Bot,
   User,
   FileText,
   CreditCard,
@@ -14,88 +13,23 @@ import {
   ArrowUpRight,
   RefreshCw
 } from "lucide-react";
-
-interface Message {
-  id: number;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  action?: {
-    type: string;
-    label: string;
-  };
-}
+import { useAIChat } from "@/hooks/use-ai-chat";
 
 const suggestedPrompts = [
   { icon: TrendingUp, text: "What's my cashflow forecast for next week?" },
-  { icon: FileText, text: "Create an invoice for my last project" },
-  { icon: ArrowUpRight, text: "Help me pay my AWS bill" },
-  { icon: CreditCard, text: "Show my card spending breakdown" },
-];
-
-const initialMessages: Message[] = [
-  {
-    id: 1,
-    role: "assistant",
-    content: "Hello! I'm your AI banking assistant. I can help you manage your finances, create invoices, analyze spending, and more. What would you like to do today?",
-    timestamp: new Date(),
-  },
+  { icon: FileText, text: "Help me create an invoice for a consulting project" },
+  { icon: ArrowUpRight, text: "How can I optimize my business expenses?" },
+  { icon: CreditCard, text: "Explain how card spend limits work" },
 ];
 
 export default function Assistant() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { messages, isLoading, sendMessage, clearChat } = useAIChat();
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-
-    const userMessage: Message = {
-      id: messages.length + 1,
-      role: "user",
-      content: text,
-      timestamp: new Date(),
-    };
-
-    setMessages([...messages, userMessage]);
+  const handleSend = () => {
+    if (!input.trim()) return;
+    sendMessage(input);
     setInput("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const responses: { [key: string]: { content: string; action?: { type: string; label: string } } } = {
-        cashflow: {
-          content: "Based on your transaction history from the last 30 days, here's your cashflow forecast:\n\n📊 **Next 7 Days Projection**\n• Expected Income: AED 18,500\n• Expected Expenses: AED 12,200\n• Net Cashflow: +AED 6,300\n\nYou have 2 invoices due for payment (INV-2024-002, INV-2024-003) totaling AED 14,500. Your AWS subscription of AED 2,340 renews on the 15th.",
-        },
-        invoice: {
-          content: "I can help you create an invoice. Based on your recent activity, I found:\n\n📝 **Potential Invoice Details**\n• Client: Tech Solutions Ltd\n• Service: Consulting (15 hours)\n• Suggested Amount: AED 7,500\n\nWould you like me to draft this invoice for your review?",
-          action: { type: "create_invoice", label: "Create Invoice Draft" },
-        },
-        aws: {
-          content: "I found your AWS payment details:\n\n💳 **Payment Ready**\n• Vendor: AWS Cloud Services\n• Amount: AED 2,340\n• Account: ****4829\n\nThis is your regular monthly subscription. Would you like me to prepare this payment for your approval?",
-          action: { type: "prepare_payment", label: "Prepare Payment" },
-        },
-        card: {
-          content: "Here's your card spending breakdown for this month:\n\n💳 **Card Ending 4829**\n• Software & SaaS: AED 4,890 (39%)\n• Travel: AED 3,500 (28%)\n• Food & Dining: AED 1,250 (10%)\n• Other: AED 2,700 (23%)\n\n**Total Spent:** AED 12,340 of AED 50,000 limit\n\nYour top merchant is Amazon Web Services. Would you like tips to optimize your software spending?",
-        },
-      };
-
-      let response = responses.cashflow;
-      if (text.toLowerCase().includes("invoice")) response = responses.invoice;
-      else if (text.toLowerCase().includes("aws") || text.toLowerCase().includes("pay")) response = responses.aws;
-      else if (text.toLowerCase().includes("card") || text.toLowerCase().includes("spending")) response = responses.card;
-
-      const assistantMessage: Message = {
-        id: messages.length + 2,
-        role: "assistant",
-        content: response.content,
-        timestamp: new Date(),
-        action: response.action,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 1500);
   };
 
   return (
@@ -105,7 +39,7 @@ export default function Assistant() {
           <h1 className="text-2xl md:text-3xl font-display font-bold">AI Assistant</h1>
           <p className="text-muted-foreground mt-1">Your intelligent banking companion</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={clearChat}>
           <RefreshCw className="h-4 w-4" />
           New Chat
         </Button>
@@ -132,14 +66,6 @@ export default function Assistant() {
                   }`}
                 >
                   <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-                  {message.action && (
-                    <Button 
-                      size="sm" 
-                      className="mt-3 gap-2 gradient-accent"
-                    >
-                      {message.action.label}
-                    </Button>
-                  )}
                 </div>
                 {message.role === "user" && (
                   <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
@@ -149,7 +75,7 @@ export default function Assistant() {
               </div>
             ))}
             
-            {isTyping && (
+            {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex gap-3">
                 <div className="h-8 w-8 rounded-full gradient-primary flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-white" />
@@ -175,7 +101,8 @@ export default function Assistant() {
                 <button
                   key={index}
                   onClick={() => sendMessage(prompt.text)}
-                  className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted text-left text-sm transition-colors"
+                  disabled={isLoading}
+                  className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted text-left text-sm transition-colors disabled:opacity-50"
                 >
                   <prompt.icon className="h-4 w-4 text-primary flex-shrink-0" />
                   <span className="line-clamp-1">{prompt.text}</span>
@@ -191,20 +118,21 @@ export default function Assistant() {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
               placeholder="Ask me anything about your finances..."
               className="flex-1"
+              disabled={isLoading}
             />
             <Button 
-              onClick={() => sendMessage(input)}
-              disabled={!input.trim() || isTyping}
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
               className="gradient-primary"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            AI actions require your confirmation before execution
+            Powered by AIBNK AI • Responses are generated in real-time
           </p>
         </div>
       </Card>
