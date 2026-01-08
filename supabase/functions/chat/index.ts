@@ -68,22 +68,52 @@ async function fetchUserContext(supabase: any) {
     }
   }
 
-  // Fetch expenses summary
+  // Fetch expenses with details
   const { data: expenses } = await supabase
     .from("expenses")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(15);
 
   if (expenses?.length) {
     const pending = expenses.filter((exp: any) => exp.status === "pending");
     const approved = expenses.filter((exp: any) => exp.status === "approved");
+    const rejected = expenses.filter((exp: any) => exp.status === "rejected");
     const totalPending = pending.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
     const totalApproved = approved.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+    const totalAll = expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
 
     context.push("\n## Expenses Summary");
-    context.push(`- Pending approval: ${pending.length} expenses totaling ${expenses[0]?.currency || "AED"} ${totalPending.toLocaleString()}`);
-    context.push(`- Approved this period: ${approved.length} expenses totaling ${expenses[0]?.currency || "AED"} ${totalApproved.toLocaleString()}`);
+    context.push(`- Total expenses: ${expenses.length} totaling ${expenses[0]?.currency || "AED"} ${totalAll.toLocaleString()}`);
+    context.push(`- Pending approval: ${pending.length} expenses (${expenses[0]?.currency || "AED"} ${totalPending.toLocaleString()})`);
+    context.push(`- Approved: ${approved.length} expenses (${expenses[0]?.currency || "AED"} ${totalApproved.toLocaleString()})`);
+    context.push(`- Rejected: ${rejected.length} expenses`);
+    
+    // Add detailed expense list
+    context.push("\nRecent Expenses:");
+    expenses.slice(0, 10).forEach((exp: any) => {
+      const date = new Date(exp.expense_date).toLocaleDateString();
+      context.push(`- ${exp.currency} ${Number(exp.amount).toLocaleString()} | ${exp.description || exp.category || "Expense"} | ${exp.vendor || "Unknown vendor"} | ${exp.status} | ${date}`);
+    });
+    
+    // Group by category
+    const byCategory: Record<string, number> = {};
+    expenses.forEach((exp: any) => {
+      const cat = exp.category || "Uncategorized";
+      byCategory[cat] = (byCategory[cat] || 0) + Number(exp.amount);
+    });
+    
+    if (Object.keys(byCategory).length > 0) {
+      context.push("\nExpenses by Category:");
+      Object.entries(byCategory)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([cat, amount]) => {
+          context.push(`- ${cat}: ${expenses[0]?.currency || "AED"} ${amount.toLocaleString()}`);
+        });
+    }
+  } else {
+    context.push("\n## Expenses");
+    context.push("No expenses recorded yet.");
   }
 
   // Fetch payments summary
