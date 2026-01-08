@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
 const DEMO_ORG_ID = "11111111-1111-1111-1111-111111111111";
+const DEMO_ACCOUNT_ID = "22222222-2222-2222-2222-222222222222";
 
 export type ExpenseStatus = "pending" | "approved" | "rejected" | "reimbursed";
 
@@ -129,9 +130,16 @@ export function useExpensesData() {
     mutationFn: async ({
       expenseId,
       status,
+      expenseData,
     }: {
       expenseId: string;
       status: ExpenseStatus;
+      expenseData?: {
+        amount: number;
+        description: string;
+        category: string;
+        vendor?: string;
+      };
     }) => {
       const updates: Record<string, any> = { status };
 
@@ -148,10 +156,32 @@ export function useExpensesData() {
         .single();
 
       if (error) throw error;
+
+      // Create a debit transaction when expense is approved
+      if (status === "approved" && expenseData) {
+        const { error: txError } = await supabase
+          .from("transactions")
+          .insert({
+            account_id: DEMO_ACCOUNT_ID,
+            type: "debit",
+            amount: expenseData.amount,
+            currency: "AED",
+            status: "completed",
+            description: expenseData.description,
+            reference: `EXP-${expenseId.substring(0, 8).toUpperCase()}`,
+            counterparty_name: expenseData.vendor || "Expense",
+            category: expenseData.category,
+          });
+
+        if (txError) throw txError;
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["account"] });
       toast.success("Expense status updated");
     },
     onError: (error) => {

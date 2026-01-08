@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const DEMO_ORG_ID = "11111111-1111-1111-1111-111111111111";
+const DEMO_ACCOUNT_ID = "22222222-2222-2222-2222-222222222222";
 
 export type InvoiceStatus = "draft" | "sent" | "viewed" | "paid" | "overdue" | "cancelled";
 
@@ -144,7 +145,20 @@ export function useInvoicesData() {
 
   // Update invoice status mutation
   const updateInvoiceStatus = useMutation({
-    mutationFn: async ({ invoiceId, status }: { invoiceId: string; status: InvoiceStatus }) => {
+    mutationFn: async ({ 
+      invoiceId, 
+      status,
+      invoiceData,
+    }: { 
+      invoiceId: string; 
+      status: InvoiceStatus;
+      invoiceData?: {
+        total: number;
+        client_name: string;
+        invoice_number: string;
+        currency: string;
+      };
+    }) => {
       const updates: Record<string, any> = { status };
       
       if (status === "sent") {
@@ -161,10 +175,32 @@ export function useInvoicesData() {
         .single();
 
       if (error) throw error;
+
+      // Create a credit transaction when invoice is marked as paid
+      if (status === "paid" && invoiceData) {
+        const { error: txError } = await supabase
+          .from("transactions")
+          .insert({
+            account_id: DEMO_ACCOUNT_ID,
+            type: "credit",
+            amount: invoiceData.total,
+            currency: invoiceData.currency || "AED",
+            status: "completed",
+            description: `Payment from ${invoiceData.client_name}`,
+            reference: invoiceData.invoice_number,
+            counterparty_name: invoiceData.client_name,
+            category: "Invoice",
+          });
+
+        if (txError) throw txError;
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["account"] });
       toast.success("Invoice status updated");
     },
     onError: (error) => {
