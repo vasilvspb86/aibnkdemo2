@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Wallet,
@@ -27,6 +27,8 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -49,7 +51,17 @@ const supportItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/signin");
+  };
+
+  const userEmail = user?.email || "user@example.com";
+  const userInitials = userEmail.slice(0, 2).toUpperCase();
   const NavItem = ({ item }: { item: typeof mainNavItems[0] & { badge?: string } }) => {
     const isActive = location.pathname === item.path;
     
@@ -132,13 +144,17 @@ export function AppSidebar() {
       <SidebarFooter className="p-4">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent">
           <div className="h-9 w-9 rounded-full bg-sidebar-primary/20 flex items-center justify-center">
-            <span className="text-sm font-medium text-sidebar-primary">AS</span>
+            <span className="text-sm font-medium text-sidebar-primary">{userInitials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">Acme Startup</p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">admin@acme.com</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{userEmail}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">Business Account</p>
           </div>
-          <button className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+          <button 
+            onClick={handleSignOut}
+            className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+            title="Sign out"
+          >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
