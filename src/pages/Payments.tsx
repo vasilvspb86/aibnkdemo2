@@ -86,8 +86,12 @@ export default function Payments() {
       return;
     }
     
+    // Find beneficiary name
+    const beneficiary = beneficiaries?.find(b => b.id === selectedBeneficiary);
+    
     await createPayment.mutateAsync({
       beneficiary_id: selectedBeneficiary,
+      beneficiary_name: beneficiary?.name || "Unknown",
       amount: parseFloat(paymentAmount),
       currency: paymentCurrency,
       reference: paymentReference,

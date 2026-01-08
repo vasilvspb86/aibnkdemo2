@@ -62,6 +62,7 @@ export function usePaymentsData() {
   const createPayment = useMutation({
     mutationFn: async (paymentData: {
       beneficiary_id: string;
+      beneficiary_name: string;
       amount: number;
       currency: string;
       reference: string;
@@ -70,7 +71,8 @@ export function usePaymentsData() {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
+      // Create payment record
+      const { data: payment, error: paymentError } = await supabase
         .from("payments")
         .insert({
           organization_id: DEMO_ORG_ID,
@@ -86,11 +88,30 @@ export function usePaymentsData() {
         .select()
         .single();
       
-      if (error) throw error;
-      return data;
+      if (paymentError) throw paymentError;
+
+      // Also create a transaction record
+      const { error: txError } = await supabase
+        .from("transactions")
+        .insert({
+          account_id: DEMO_ACCOUNT_ID,
+          type: "debit",
+          amount: paymentData.amount,
+          currency: paymentData.currency,
+          status: "pending",
+          description: `Payment to ${paymentData.beneficiary_name}`,
+          reference: paymentData.reference || `PAY-${payment.id.substring(0, 8).toUpperCase()}`,
+          counterparty_name: paymentData.beneficiary_name,
+          category: paymentData.purpose || "Transfer",
+        });
+      
+      if (txError) throw txError;
+      
+      return payment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       toast.success("Payment created successfully");
     },
     onError: (error) => {
