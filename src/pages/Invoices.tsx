@@ -129,8 +129,17 @@ export default function Invoices() {
     setIsCreateOpen(false);
   };
 
-  const handleStatusChange = (invoiceId: string, newStatus: InvoiceStatus) => {
-    updateInvoiceStatus.mutate({ invoiceId, status: newStatus });
+  const handleStatusChange = (invoice: NonNullable<typeof invoices>[number], newStatus: InvoiceStatus) => {
+    updateInvoiceStatus.mutate({ 
+      invoiceId: invoice.id, 
+      status: newStatus,
+      invoiceData: newStatus === "paid" ? {
+        total: Number(invoice.total),
+        client_name: invoice.client_name,
+        invoice_number: invoice.invoice_number,
+        currency: invoice.currency,
+      } : undefined,
+    });
   };
 
   const filteredInvoices = invoices?.filter((invoice) => {
@@ -443,7 +452,7 @@ export default function Invoices() {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleStatusChange(invoice.id, "sent")}
+                          onClick={() => handleStatusChange(invoice, "sent")}
                         >
                           <Send className="h-4 w-4" />
                         </Button>
@@ -456,13 +465,13 @@ export default function Invoices() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           {invoice.status !== "paid" && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(invoice.id, "paid")}>
+                            <DropdownMenuItem onClick={() => handleStatusChange(invoice, "paid")}>
                               <Check className="h-4 w-4 mr-2" />
                               Mark as Paid
                             </DropdownMenuItem>
                           )}
                           {invoice.status === "draft" && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(invoice.id, "sent")}>
+                            <DropdownMenuItem onClick={() => handleStatusChange(invoice, "sent")}>
                               <Send className="h-4 w-4 mr-2" />
                               Send Invoice
                             </DropdownMenuItem>

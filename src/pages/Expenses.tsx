@@ -100,8 +100,17 @@ export default function Expenses() {
     setIsCreateOpen(false);
   };
 
-  const handleStatusChange = (expenseId: string, newStatus: ExpenseStatus) => {
-    updateExpenseStatus.mutate({ expenseId, status: newStatus });
+  const handleStatusChange = (expense: NonNullable<typeof expenses>[number], newStatus: ExpenseStatus) => {
+    updateExpenseStatus.mutate({ 
+      expenseId: expense.id, 
+      status: newStatus,
+      expenseData: newStatus === "approved" ? {
+        amount: Number(expense.amount),
+        description: expense.description || "",
+        category: expense.category || "Other",
+        vendor: expense.vendor || undefined,
+      } : undefined,
+    });
   };
 
   const filteredExpenses = expenses?.filter((expense) => {
@@ -356,11 +365,11 @@ export default function Expenses() {
                             <DropdownMenuContent align="end">
                               {expense.status === "pending" && (
                                 <>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(expense.id, "approved")}>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(expense, "approved")}>
                                     <Check className="h-4 w-4 mr-2" />
                                     Approve
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(expense.id, "rejected")}>
+                                  <DropdownMenuItem onClick={() => handleStatusChange(expense, "rejected")}>
                                     <XCircle className="h-4 w-4 mr-2" />
                                     Reject
                                   </DropdownMenuItem>
