@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useTheme } from "@/hooks/use-theme";
 import { 
   User, 
   Building2, 
@@ -15,7 +16,9 @@ import {
   MoreHorizontal,
   Mail,
   Smartphone,
-  Key
+  Key,
+  Sun,
+  Moon
 } from "lucide-react";
 
 const teamMembers = [
@@ -25,6 +28,8 @@ const teamMembers = [
 ];
 
 export default function Settings() {
+  const { theme, toggleTheme } = useTheme();
+  
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -85,6 +90,34 @@ export default function Settings() {
                 <Input type="tel" defaultValue="+971 50 123 4567" />
               </div>
               <Button className="gradient-primary">Save Changes</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>Customize the look and feel of your dashboard</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-blue-600 flex items-center justify-center overflow-hidden">
+                    <Sun className={`h-5 w-5 text-white absolute transition-all duration-500 ${theme === 'dark' ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
+                    <Moon className={`h-5 w-5 text-white absolute transition-all duration-500 ${theme === 'dark' ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium">Dark Mode</p>
+                    <p className="text-sm text-muted-foreground">
+                      {theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                    </p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={theme === 'dark'} 
+                  onCheckedChange={toggleTheme}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
             </CardContent>
           </Card>
 
