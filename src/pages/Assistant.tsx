@@ -11,25 +11,57 @@ import {
   CreditCard,
   TrendingUp,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
+  Check,
+  Loader2
 } from "lucide-react";
-import { useAIChat } from "@/hooks/use-ai-chat";
+import { useAIChat, ChatAction } from "@/hooks/use-ai-chat";
+import { useNavigate } from "react-router-dom";
 
 const suggestedPrompts = [
-  { icon: TrendingUp, text: "What's my cashflow forecast for next week?" },
-  { icon: FileText, text: "Help me create an invoice for a consulting project" },
-  { icon: ArrowUpRight, text: "How can I optimize my business expenses?" },
-  { icon: CreditCard, text: "Explain how card spend limits work" },
+  { icon: TrendingUp, text: "What's my current account balance and recent activity?" },
+  { icon: FileText, text: "Create an invoice for Tech Solutions Ltd for AED 5,000" },
+  { icon: ArrowUpRight, text: "Prepare a payment of AED 2,500 for AWS Cloud Services" },
+  { icon: CreditCard, text: "Show my card spending breakdown" },
 ];
 
+const actionIcons: Record<string, typeof FileText> = {
+  create_invoice: FileText,
+  create_payment: ArrowUpRight,
+  approve_expense: Check,
+  view_account: CreditCard,
+};
+
 export default function Assistant() {
-  const { messages, isLoading, sendMessage, clearChat } = useAIChat();
+  const { messages, isLoading, sendMessage, executeAction, clearChat } = useAIChat();
   const [input, setInput] = useState("");
+  const [executingActions, setExecutingActions] = useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
 
   const handleSend = () => {
     if (!input.trim()) return;
     sendMessage(input);
     setInput("");
+  };
+
+  const handleActionClick = async (messageId: string, actionIndex: number, action: ChatAction) => {
+    const key = `${messageId}-${actionIndex}`;
+    setExecutingActions(prev => ({ ...prev, [key]: true }));
+    
+    const success = await executeAction(messageId, actionIndex);
+    
+    setExecutingActions(prev => ({ ...prev, [key]: false }));
+    
+    // Navigate to relevant page after action
+    if (success) {
+      setTimeout(() => {
+        if (action.type === "create_invoice") {
+          navigate("/invoices");
+        } else if (action.type === "create_payment") {
+          navigate("/payments");
+        }
+      }, 1500);
+    }
   };
 
   return (
@@ -66,6 +98,38 @@ export default function Assistant() {
                   }`}
                 >
                   <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                  
+                  {/* Action Buttons */}
+                  {message.actions && message.actions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
+                      {message.actions.map((action, idx) => {
+                        const ActionIcon = actionIcons[action.type] || FileText;
+                        const key = `${message.id}-${idx}`;
+                        const isExecuting = executingActions[key];
+                        const isExecuted = action.executed;
+                        
+                        return (
+                          <Button
+                            key={idx}
+                            size="sm"
+                            variant={isExecuted ? "outline" : "default"}
+                            className={`gap-2 ${isExecuted ? "bg-accent/20 text-accent border-accent/30" : "gradient-accent"}`}
+                            onClick={() => handleActionClick(message.id, idx, action)}
+                            disabled={isExecuting || isExecuted}
+                          >
+                            {isExecuting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isExecuted ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <ActionIcon className="h-4 w-4" />
+                            )}
+                            {isExecuted ? "Done" : action.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 {message.role === "user" && (
                   <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
@@ -96,7 +160,7 @@ export default function Assistant() {
         {messages.length <= 1 && (
           <div className="p-4 border-t">
             <p className="text-sm text-muted-foreground mb-3">Try asking:</p>
-            <div className="grid grid-cols-2 gap-2 max-w-3xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-3xl mx-auto">
               {suggestedPrompts.map((prompt, index) => (
                 <button
                   key={index}
@@ -105,7 +169,7 @@ export default function Assistant() {
                   className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted text-left text-sm transition-colors disabled:opacity-50"
                 >
                   <prompt.icon className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="line-clamp-1">{prompt.text}</span>
+                  <span className="line-clamp-2">{prompt.text}</span>
                 </button>
               ))}
             </div>
@@ -132,7 +196,7 @@ export default function Assistant() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Powered by AIBNK AI • Responses are generated in real-time
+            Powered by AIBNK AI • Actions require confirmation before execution
           </p>
         </div>
       </Card>
