@@ -67,6 +67,9 @@ export function usePaymentsData() {
       reference: string;
       purpose: string;
     }) => {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from("payments")
         .insert({
@@ -78,6 +81,7 @@ export function usePaymentsData() {
           reference: paymentData.reference,
           purpose: paymentData.purpose,
           status: "pending_approval",
+          created_by: user?.id,
         })
         .select()
         .single();
