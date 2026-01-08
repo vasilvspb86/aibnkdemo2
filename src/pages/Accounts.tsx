@@ -2,13 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Wallet, 
   Copy, 
   Download, 
   ArrowUpRight, 
   ArrowDownLeft,
-  Filter,
   Search,
   MoreHorizontal,
   Eye,
@@ -16,36 +16,84 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-
-const accountDetails = {
-  name: "Acme Startup FZ-LLC",
-  accountNumber: "1234567890123456",
-  iban: "AE070331234567890123456",
-  swift: "AIBNAEXX",
-  currency: "AED",
-  balance: 142580.50,
-};
-
-const transactions = [
-  { id: 1, description: "Payment from Client A", reference: "INV-2024-001", amount: 12500, type: "credit", date: "2024-01-08", status: "Completed" },
-  { id: 2, description: "AWS Cloud Services", reference: "SUB-AWS-JAN", amount: -2340, type: "debit", date: "2024-01-08", status: "Completed" },
-  { id: 3, description: "Salary - John Doe", reference: "PAY-EMP-001", amount: -8500, type: "debit", date: "2024-01-07", status: "Completed" },
-  { id: 4, description: "Payment from Client B", reference: "INV-2024-002", amount: 5600, type: "credit", date: "2024-01-07", status: "Completed" },
-  { id: 5, description: "Office Supplies", reference: "PO-2024-015", amount: -450, type: "debit", date: "2024-01-06", status: "Completed" },
-  { id: 6, description: "Marketing Agency", reference: "INV-MKT-001", amount: -3200, type: "debit", date: "2024-01-05", status: "Pending" },
-  { id: 7, description: "Payment from Client C", reference: "INV-2024-003", amount: 8900, type: "credit", date: "2024-01-05", status: "Completed" },
-  { id: 8, description: "Software License", reference: "LIC-2024-Q1", amount: -1500, type: "debit", date: "2024-01-04", status: "Completed" },
-];
+import { useAccountData, formatTransactionDate, TransactionType } from "@/hooks/use-account-data";
+import { toast } from "sonner";
 
 export default function Accounts() {
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  
+  const {
+    account,
+    transactions,
+    stats,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    typeFilter,
+    setTypeFilter,
+  } = useAccountData();
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
     setCopied(field);
+    toast.success("Copied to clipboard");
     setTimeout(() => setCopied(null), 2000);
   };
+
+  const handleTabChange = (value: string) => {
+    setTypeFilter(value as TransactionType);
+  };
+
+  const orgName = (account as any)?.organization?.name || "Business Account";
+  const accountNumber = account?.account_number || "";
+  const iban = account?.iban || "";
+  const balance = Number(account?.balance || 0);
+  const availableBalance = Number(account?.available_balance || 0);
+
+  const TransactionRow = ({ tx }: { tx: any }) => (
+    <div 
+      className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+    >
+      <div className="flex items-center gap-4">
+        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+          tx.type === "credit" ? "bg-accent/10" : "bg-muted"
+        }`}>
+          {tx.type === "credit" ? (
+            <ArrowDownLeft className="h-5 w-5 text-accent" />
+          ) : (
+            <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+        <div>
+          <p className="font-medium">{tx.description}</p>
+          <p className="text-sm text-muted-foreground">
+            {tx.reference || tx.counterparty_name || "—"} • {formatTransactionDate(tx.created_at)}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
+            {tx.type === "credit" ? "+" : "-"}AED {Number(tx.amount).toLocaleString()}
+          </p>
+          <Badge 
+            variant={tx.status === "completed" ? "outline" : "secondary"}
+            className="text-xs capitalize"
+          >
+            {tx.status}
+          </Badge>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -66,7 +114,11 @@ export default function Accounts() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm opacity-80">Primary Account</p>
-              <h2 className="font-display font-bold text-xl mt-1">{accountDetails.name}</h2>
+              {isLoading ? (
+                <Skeleton className="h-7 w-48 bg-white/20 mt-1" />
+              ) : (
+                <h2 className="font-display font-bold text-xl mt-1">{orgName}</h2>
+              )}
             </div>
             <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
               <Wallet className="h-6 w-6" />
@@ -76,12 +128,16 @@ export default function Accounts() {
           <div className="mt-8">
             <p className="text-sm opacity-80">Available Balance</p>
             <div className="flex items-center gap-3 mt-1">
-              <p className="font-display font-bold text-3xl">
-                {showBalance 
-                  ? `AED ${accountDetails.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-                  : "AED ••••••••"
-                }
-              </p>
+              {isLoading ? (
+                <Skeleton className="h-9 w-48 bg-white/20" />
+              ) : (
+                <p className="font-display font-bold text-3xl">
+                  {showBalance 
+                    ? `AED ${availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                    : "AED ••••••••"
+                  }
+                </p>
+              )}
               <button 
                 onClick={() => setShowBalance(!showBalance)}
                 className="opacity-80 hover:opacity-100 transition-opacity"
@@ -89,46 +145,107 @@ export default function Accounts() {
                 {showBalance ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+            {!isLoading && balance !== availableBalance && (
+              <p className="text-sm opacity-60 mt-1">
+                Total balance: AED {balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/20">
             <div>
               <p className="text-xs opacity-60">Account Number</p>
               <div className="flex items-center gap-2 mt-1">
-                <p className="font-mono text-sm">•••• {accountDetails.accountNumber.slice(-4)}</p>
-                <button 
-                  onClick={() => copyToClipboard(accountDetails.accountNumber, 'account')}
-                  className="opacity-60 hover:opacity-100"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-                {copied === 'account' && <span className="text-xs">Copied!</span>}
+                {isLoading ? (
+                  <Skeleton className="h-5 w-24 bg-white/20" />
+                ) : (
+                  <>
+                    <p className="font-mono text-sm">•••• {accountNumber.slice(-4)}</p>
+                    <button 
+                      onClick={() => copyToClipboard(accountNumber, 'account')}
+                      className="opacity-60 hover:opacity-100"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    {copied === 'account' && <span className="text-xs">Copied!</span>}
+                  </>
+                )}
               </div>
             </div>
             <div>
               <p className="text-xs opacity-60">IBAN</p>
               <div className="flex items-center gap-2 mt-1">
-                <p className="font-mono text-sm">{accountDetails.iban.slice(0, 4)}...{accountDetails.iban.slice(-4)}</p>
-                <button 
-                  onClick={() => copyToClipboard(accountDetails.iban, 'iban')}
-                  className="opacity-60 hover:opacity-100"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-                {copied === 'iban' && <span className="text-xs">Copied!</span>}
+                {isLoading ? (
+                  <Skeleton className="h-5 w-32 bg-white/20" />
+                ) : (
+                  <>
+                    <p className="font-mono text-sm">{iban.slice(0, 4)}...{iban.slice(-4)}</p>
+                    <button 
+                      onClick={() => copyToClipboard(iban, 'iban')}
+                      className="opacity-60 hover:opacity-100"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                    {copied === 'iban' && <span className="text-xs">Copied!</span>}
+                  </>
+                )}
               </div>
             </div>
             <div>
               <p className="text-xs opacity-60">SWIFT/BIC</p>
-              <p className="font-mono text-sm mt-1">{accountDetails.swift}</p>
+              <p className="font-mono text-sm mt-1">AIBNAEXX</p>
             </div>
             <div>
               <p className="text-xs opacity-60">Currency</p>
-              <p className="font-mono text-sm mt-1">{accountDetails.currency}</p>
+              <p className="font-mono text-sm mt-1">{account?.currency || "AED"}</p>
             </div>
           </div>
         </div>
       </Card>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Credits</p>
+                {isLoading ? (
+                  <Skeleton className="h-7 w-32 mt-1" />
+                ) : (
+                  <p className="text-2xl font-display font-bold text-accent">
+                    +AED {stats.credits.toLocaleString()}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">{stats.creditCount} transactions</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+                <ArrowDownLeft className="h-6 w-6 text-accent" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Debits</p>
+                {isLoading ? (
+                  <Skeleton className="h-7 w-32 mt-1" />
+                ) : (
+                  <p className="text-2xl font-display font-bold">
+                    -AED {stats.debits.toLocaleString()}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">{stats.debitCount} transactions</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                <ArrowUpRight className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Transactions */}
       <Card>
@@ -141,109 +258,55 @@ export default function Accounts() {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search transactions..." className="pl-10 w-64" />
+                <Input 
+                  placeholder="Search transactions..." 
+                  className="pl-10 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all">
+          <Tabs defaultValue="all" value={typeFilter} onValueChange={handleTabChange}>
             <TabsList className="mb-4">
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="credits">Credits</TabsTrigger>
-              <TabsTrigger value="debits">Debits</TabsTrigger>
+              <TabsTrigger value="credit">Credits</TabsTrigger>
+              <TabsTrigger value="debit">Debits</TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="mt-0">
+            
+            <TabsContent value={typeFilter} className="mt-0">
               <div className="space-y-2">
-                {transactions.map((tx) => (
-                  <div 
-                    key={tx.id} 
-                    className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                        tx.type === "credit" ? "bg-accent/10" : "bg-muted"
-                      }`}>
-                        {tx.type === "credit" ? (
-                          <ArrowDownLeft className="h-5 w-5 text-accent" />
-                        ) : (
-                          <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                        )}
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div>
+                          <Skeleton className="h-5 w-48 mb-1" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{tx.description}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {tx.reference} • {tx.date}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
-                          {tx.type === "credit" ? "+" : ""}AED {Math.abs(tx.amount).toLocaleString()}
-                        </p>
-                        <Badge 
-                          variant={tx.status === "Completed" ? "outline" : "secondary"}
-                          className="text-xs"
-                        >
-                          {tx.status}
-                        </Badge>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="credits">
-              <div className="space-y-2">
-                {transactions.filter(tx => tx.type === "credit").map((tx) => (
-                  <div 
-                    key={tx.id} 
-                    className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
-                        <ArrowDownLeft className="h-5 w-5 text-accent" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{tx.description}</p>
-                        <p className="text-sm text-muted-foreground">{tx.reference} • {tx.date}</p>
+                        <Skeleton className="h-5 w-24 mb-1" />
+                        <Skeleton className="h-5 w-16" />
                       </div>
                     </div>
-                    <p className="font-semibold text-accent">+AED {tx.amount.toLocaleString()}</p>
+                  ))
+                ) : transactions.length > 0 ? (
+                  transactions.map((tx) => (
+                    <TransactionRow key={tx.id} tx={tx} />
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    {searchQuery ? (
+                      <p>No transactions found matching "{searchQuery}"</p>
+                    ) : (
+                      <p>No transactions yet</p>
+                    )}
                   </div>
-                ))}
-              </div>
-            </TabsContent>
-            <TabsContent value="debits">
-              <div className="space-y-2">
-                {transactions.filter(tx => tx.type === "debit").map((tx) => (
-                  <div 
-                    key={tx.id} 
-                    className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{tx.description}</p>
-                        <p className="text-sm text-muted-foreground">{tx.reference} • {tx.date}</p>
-                      </div>
-                    </div>
-                    <p className="font-semibold">AED {Math.abs(tx.amount).toLocaleString()}</p>
-                  </div>
-                ))}
+                )}
               </div>
             </TabsContent>
           </Tabs>
