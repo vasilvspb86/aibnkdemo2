@@ -185,6 +185,133 @@ export function usePaymentsData() {
     },
   });
 
+  // Update payment mutation
+  const updatePayment = useMutation({
+    mutationFn: async (paymentData: {
+      id: string;
+      beneficiary_id?: string;
+      amount?: number;
+      currency?: string;
+      reference?: string;
+      purpose?: string;
+      status?: "draft" | "pending_approval" | "scheduled" | "processing" | "completed" | "failed" | "cancelled";
+    }) => {
+      const { id, ...updateData } = paymentData;
+      const { data, error } = await supabase
+        .from("payments")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      toast.success("Payment updated successfully");
+    },
+    onError: (error) => {
+      toast.error(`Failed to update payment: ${error.message}`);
+    },
+  });
+
+  // Approve payment mutation
+  const approvePayment = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Update payment status to processing
+      const { data: payment, error } = await supabase
+        .from("payments")
+        .update({ 
+          status: "processing",
+          approved_by: user?.id,
+        })
+        .eq("id", paymentId)
+        .select(`*, beneficiary:beneficiaries(name)`)
+        .single();
+      
+      if (error) throw error;
+
+      // Update the related transaction to processing
+      const { error: txError } = await supabase
+        .from("transactions")
+        .update({ status: "processing" })
+        .eq("account_id", DEMO_ACCOUNT_ID)
+        .eq("amount", payment.amount)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      if (txError) console.error("Transaction update error:", txError);
+
+      // Simulate processing and completion after delay
+      setTimeout(async () => {
+        await supabase
+          .from("payments")
+          .update({ 
+            status: "completed",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", paymentId);
+        
+        await supabase
+          .from("transactions")
+          .update({ status: "completed" })
+          .eq("account_id", DEMO_ACCOUNT_ID)
+          .eq("amount", payment.amount)
+          .eq("status", "processing");
+        
+        queryClient.invalidateQueries({ queryKey: ["payments"] });
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["account"] });
+      }, 2000);
+      
+      return payment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      toast.success("Payment approved and processing");
+    },
+    onError: (error) => {
+      toast.error(`Failed to approve payment: ${error.message}`);
+    },
+  });
+
+  // Cancel payment mutation
+  const cancelPayment = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { data: payment, error } = await supabase
+        .from("payments")
+        .update({ status: "cancelled" })
+        .eq("id", paymentId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+
+      // Cancel related transaction
+      await supabase
+        .from("transactions")
+        .update({ status: "cancelled" })
+        .eq("account_id", DEMO_ACCOUNT_ID)
+        .eq("amount", payment.amount)
+        .eq("status", "pending");
+      
+      return payment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["account"] });
+      toast.success("Payment cancelled");
+    },
+    onError: (error) => {
+      toast.error(`Failed to cancel payment: ${error.message}`);
+    },
+  });
+
   return {
     beneficiaries,
     payments,
@@ -193,6 +320,9 @@ export function usePaymentsData() {
     createPayment,
     createPaymentLink,
     createBeneficiary,
+    updatePayment,
+    approvePayment,
+    cancelPayment,
   };
 }
 
