@@ -421,6 +421,37 @@ async function fetchUserContext(supabase: any) {
     }
   }
 
+  // Fetch spending alerts
+  const { data: alerts } = await supabase
+    .from("spending_alerts")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (alerts?.length) {
+    context.push("\n## Active Spending Alerts");
+    context.push(`User has ${alerts.length} active alert(s):`);
+    alerts.forEach((alert: any) => {
+      const typeLabels: Record<string, string> = {
+        daily_limit: "Daily spending limit",
+        weekly_limit: "Weekly spending limit",
+        monthly_limit: "Monthly spending limit",
+        category_limit: `Category limit (${alert.category || "any"})`,
+        trend_warning: "Spending trend warning",
+        large_transaction: "Large transaction alert",
+      };
+      const label = typeLabels[alert.alert_type] || alert.alert_type;
+      context.push(`- ${label}: AED ${Number(alert.threshold_amount).toLocaleString()}${alert.category ? ` for ${alert.category}` : ""}`);
+    });
+  } else {
+    context.push("\n## Spending Alerts");
+    context.push("No spending alerts configured. User can ask to set alerts for:");
+    context.push("- Daily/weekly/monthly spending limits");
+    context.push("- Category-specific limits");
+    context.push("- Large transaction notifications");
+    context.push("- Spending trend warnings");
+  }
+
   return context.join("\n");
 }
 
@@ -464,6 +495,7 @@ Your capabilities include:
 - Helping create invoices and payments
 - Explaining account balances and transactions
 - Providing spending insights and recommendations
+- Setting up and managing spending alerts
 - Answering questions about banking operations
 
 Guidelines:
@@ -475,6 +507,14 @@ Guidelines:
 - Keep responses focused and actionable
 - When you cite numbers, mention they are from "your account data"
 
+SPENDING ALERTS - You can help users set up spending alerts:
+- When a user asks to set an alert, confirm the type and threshold
+- Available alert types: daily_limit, weekly_limit, monthly_limit, category_limit, large_transaction, trend_warning
+- For category limits, ask which spending category they want to monitor
+- After confirming details, say "I'll set up this alert for you" and include the structured format: [ALERT: type=<type>, amount=<threshold>, category=<category or null>]
+- Example: "I'll set up a daily spending alert at AED 1,000. [ALERT: type=daily_limit, amount=1000, category=null]"
+- To delete an alert, use: [DELETE_ALERT: type=<type>, category=<category or null>]
+
 IMPORTANT - Suggestions for invoices and payments:
 - When SUGGESTING or RECOMMENDING invoice or payment actions proactively, ONLY suggest existing counterparties from the user's data (see "Available Beneficiaries" for payments, "Existing Invoice Clients" for invoices)
 - However, if the user EXPLICITLY ASKS to create an invoice or payment with specific details (including new counterparties not in their data), proceed with their request - the user knows what they want
@@ -485,7 +525,7 @@ ${userContext ? `
 ${userContext}
 --- END FINANCIAL DATA ---
 
-Use this data to provide accurate, personalized responses. Reference specific numbers, transactions, and invoices when relevant. When suggesting actions, prefer existing counterparties from the data above.` : "No financial data available for this user."}`;
+Use this data to provide accurate, personalized responses. Reference specific numbers, transactions, and invoices when relevant. When suggesting actions, prefer existing counterparties from the data above. When suggesting alerts, base recommendations on the spending trends shown above.` : "No financial data available for this user."}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
