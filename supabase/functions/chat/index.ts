@@ -113,6 +113,122 @@ async function fetchUserContext(supabase: any) {
     });
   }
 
+  // Fetch extended transaction history for trends analysis (last 90 days)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  
+  const { data: trendTransactions } = await supabase
+    .from("transactions")
+    .select("*")
+    .gte("created_at", ninetyDaysAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (trendTransactions?.length) {
+    const now = new Date();
+    
+    // Weekly breakdown (last 4 weeks)
+    const weeklyData: { week: string; credits: number; debits: number; net: number }[] = [];
+    for (let i = 0; i < 4; i++) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 7);
+      
+      const weekTxs = trendTransactions.filter((tx: any) => {
+        const txDate = new Date(tx.created_at);
+        return txDate >= weekStart && txDate < weekEnd;
+      });
+      
+      const credits = weekTxs.filter((tx: any) => tx.type === "credit").reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+      const debits = weekTxs.filter((tx: any) => tx.type === "debit").reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+      
+      weeklyData.push({
+        week: i === 0 ? "This week" : i === 1 ? "Last week" : `${i} weeks ago`,
+        credits,
+        debits,
+        net: credits - debits,
+      });
+    }
+    
+    context.push("\n## Weekly Spending Trends (Last 4 Weeks)");
+    weeklyData.forEach((week) => {
+      const trend = week.net >= 0 ? "📈" : "📉";
+      context.push(`- ${week.week}: In +AED ${week.credits.toLocaleString()} | Out -AED ${week.debits.toLocaleString()} | Net: ${week.net >= 0 ? "+" : ""}AED ${week.net.toLocaleString()} ${trend}`);
+    });
+    
+    // Week-over-week comparison
+    if (weeklyData.length >= 2) {
+      const thisWeekSpending = weeklyData[0].debits;
+      const lastWeekSpending = weeklyData[1].debits;
+      if (lastWeekSpending > 0) {
+        const changePercent = ((thisWeekSpending - lastWeekSpending) / lastWeekSpending * 100).toFixed(1);
+        const changeDir = thisWeekSpending > lastWeekSpending ? "increased" : "decreased";
+        context.push(`\nWeek-over-week: Spending ${changeDir} by ${Math.abs(Number(changePercent))}%`);
+      }
+    }
+    
+    // Monthly breakdown (last 3 months)
+    const monthlyData: { month: string; credits: number; debits: number; net: number; txCount: number }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      
+      const monthTxs = trendTransactions.filter((tx: any) => {
+        const txDate = new Date(tx.created_at);
+        return txDate >= monthStart && txDate <= monthEnd;
+      });
+      
+      const credits = monthTxs.filter((tx: any) => tx.type === "credit").reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+      const debits = monthTxs.filter((tx: any) => tx.type === "debit").reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+      
+      const monthName = monthStart.toLocaleString("default", { month: "long", year: "numeric" });
+      monthlyData.push({
+        month: i === 0 ? `${monthName} (current)` : monthName,
+        credits,
+        debits,
+        net: credits - debits,
+        txCount: monthTxs.length,
+      });
+    }
+    
+    context.push("\n## Monthly Spending Trends (Last 3 Months)");
+    monthlyData.forEach((month) => {
+      const trend = month.net >= 0 ? "📈" : "📉";
+      context.push(`- ${month.month}: In +AED ${month.credits.toLocaleString()} | Out -AED ${month.debits.toLocaleString()} | Net: ${month.net >= 0 ? "+" : ""}AED ${month.net.toLocaleString()} ${trend} (${month.txCount} transactions)`);
+    });
+    
+    // Month-over-month comparison
+    if (monthlyData.length >= 2 && monthlyData[1].debits > 0) {
+      const thisMonthSpending = monthlyData[0].debits;
+      const lastMonthSpending = monthlyData[1].debits;
+      const changePercent = ((thisMonthSpending - lastMonthSpending) / lastMonthSpending * 100).toFixed(1);
+      const changeDir = thisMonthSpending > lastMonthSpending ? "increased" : "decreased";
+      context.push(`\nMonth-over-month: Spending ${changeDir} by ${Math.abs(Number(changePercent))}%`);
+    }
+    
+    // Average daily spending
+    const allDebits = trendTransactions.filter((tx: any) => tx.type === "debit");
+    const totalSpending = allDebits.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+    const daysWithData = Math.min(90, Math.ceil((now.getTime() - new Date(trendTransactions[trendTransactions.length - 1]?.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+    const avgDailySpending = daysWithData > 0 ? totalSpending / daysWithData : 0;
+    
+    context.push(`\n### Spending Insights:`);
+    context.push(`- Average daily spending: AED ${avgDailySpending.toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+    context.push(`- Projected monthly spending: AED ${(avgDailySpending * 30).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
+    
+    // Spending velocity (is spending accelerating?)
+    if (weeklyData.length >= 3) {
+      const recentAvg = (weeklyData[0].debits + weeklyData[1].debits) / 2;
+      const olderAvg = (weeklyData[2].debits + weeklyData[3]?.debits || weeklyData[2].debits) / 2;
+      if (olderAvg > 0) {
+        const velocityChange = ((recentAvg - olderAvg) / olderAvg * 100).toFixed(1);
+        const velocityDir = recentAvg > olderAvg ? "accelerating ⚠️" : "slowing down ✅";
+        context.push(`- Spending trend: ${velocityDir} (${Math.abs(Number(velocityChange))}% change in recent weeks)`);
+      }
+    }
+  }
+
   // Fetch invoices summary
   const { data: invoices } = await supabase
     .from("invoices")
