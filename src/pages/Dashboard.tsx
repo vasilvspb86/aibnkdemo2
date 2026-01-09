@@ -19,6 +19,7 @@ import {
 import { Link } from "react-router-dom";
 import { useDashboardData, formatRelativeTime } from "@/hooks/use-dashboard-data";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
 
 const quickActions = [
   { label: "Send Money", icon: ArrowUpRight, path: "/payments", color: "bg-primary" },
@@ -38,6 +39,21 @@ export default function Dashboard() {
     kybApplication,
     isLoading 
   } = useDashboardData();
+  const { data: localOnboardingData, progress: localProgress } = useLocalOnboarding();
+  
+  // Check if user has local onboarding data in progress
+  const hasLocalOnboarding = localOnboardingData.company.confirmed_by_user || 
+                             localOnboardingData.owner.full_name || 
+                             Object.keys(localOnboardingData.documents).length > 0;
+  
+  // Determine the next step in local onboarding
+  const getOnboardingNextStep = () => {
+    if (localOnboardingData.documentsSkipped) return "/settings?tab=company";
+    if (!localOnboardingData.company.confirmed_by_user) return "/onboarding-local/company";
+    if (!localOnboardingData.owner.full_name) return "/onboarding-local/ownership";
+    if (!localOnboardingData.compliance.account_use_purpose) return "/onboarding-local/compliance";
+    return "/onboarding-local/documents";
+  };
 
   // Get user's display name from auth metadata, email, or fallback to company name
   const getUserName = () => {
@@ -65,10 +81,14 @@ export default function Dashboard() {
       colors: { border: string; bg: string; iconBg: string; iconColor: string; badgeBorder: string; badgeText: string }
     }> = {
       draft: {
-        title: "Application Started",
-        description: "your KYB application to activate your account",
-        descriptionPrefix: "Complete",
-        badge: "Draft",
+        title: hasLocalOnboarding ? "Continue Your Application" : "Application Started",
+        description: hasLocalOnboarding 
+          ? (localOnboardingData.documentsSkipped 
+              ? "Upload documents to complete verification" 
+              : `${localProgress}% complete - pick up where you left off`)
+          : "your KYB application to activate your account",
+        descriptionPrefix: hasLocalOnboarding ? undefined : "Complete",
+        badge: hasLocalOnboarding ? `${localProgress}%` : "Draft",
         icon: Clock,
         colors: { border: "border-muted", bg: "bg-muted/30", iconBg: "bg-muted", iconColor: "text-muted-foreground", badgeBorder: "border-muted-foreground", badgeText: "text-muted-foreground" }
       },
@@ -150,11 +170,19 @@ export default function Dashboard() {
             <div>
               <p className="font-medium">{kybConfig.title}</p>
               <p className="text-sm text-muted-foreground">
-                {kybConfig.descriptionPrefix && (
-                  <Link to="/onboarding" className="text-primary hover:underline font-medium">
-                    {kybConfig.descriptionPrefix}
+                {kybConfig.descriptionPrefix ? (
+                  <>
+                    <Link to="/onboarding-local/welcome" className="text-primary hover:underline font-medium">
+                      {kybConfig.descriptionPrefix}
+                    </Link>{" "}
+                  </>
+                ) : hasLocalOnboarding ? (
+                  <Link to={getOnboardingNextStep()} className="text-primary hover:underline font-medium">
+                    Continue application →
                   </Link>
-                )}{kybConfig.descriptionPrefix && " "}{kybConfig.description}
+                ) : null}
+                {!hasLocalOnboarding && kybConfig.description}
+                {hasLocalOnboarding && !kybConfig.descriptionPrefix && ` ${kybConfig.description}`}
               </p>
             </div>
           </div>
