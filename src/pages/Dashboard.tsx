@@ -59,13 +59,15 @@ export default function Dashboard() {
     const configs: Record<string, { 
       title: string; 
       description: string; 
+      descriptionPrefix?: string;
       badge: string; 
       icon: typeof CheckCircle2;
       colors: { border: string; bg: string; iconBg: string; iconColor: string; badgeBorder: string; badgeText: string }
     }> = {
       draft: {
         title: "Application Started",
-        description: "Complete your KYB application to activate your account",
+        description: "your KYB application to activate your account",
+        descriptionPrefix: "Complete",
         badge: "Draft",
         icon: Clock,
         colors: { border: "border-muted", bg: "bg-muted/30", iconBg: "bg-muted", iconColor: "text-muted-foreground", badgeBorder: "border-muted-foreground", badgeText: "text-muted-foreground" }
@@ -148,12 +150,11 @@ export default function Dashboard() {
             <div>
               <p className="font-medium">{kybConfig.title}</p>
               <p className="text-sm text-muted-foreground">
-                {kybConfig.description}
-                {(!kybApplication || kybApplication.status === "draft") && (
-                  <Link to="/onboarding" className="ml-1 text-primary hover:underline font-medium">
-                    Complete →
+                {kybConfig.descriptionPrefix && (
+                  <Link to="/onboarding" className="text-primary hover:underline font-medium">
+                    {kybConfig.descriptionPrefix}
                   </Link>
-                )}
+                )}{kybConfig.descriptionPrefix && " "}{kybConfig.description}
               </p>
             </div>
           </div>
