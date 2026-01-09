@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +17,17 @@ import {
 } from "lucide-react";
 import { useAIChat, ChatAction } from "@/hooks/use-ai-chat";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
-const suggestedPrompts = [
+const DEMO_ORG_ID = "11111111-1111-1111-1111-111111111111";
+
+interface SuggestedPrompt {
+  icon: typeof TrendingUp;
+  text: string;
+}
+
+const defaultPrompts: SuggestedPrompt[] = [
   { icon: TrendingUp, text: "What's my current account balance and recent activity?" },
-  { icon: FileText, text: "Create an invoice for Tech Solutions Ltd for AED 5,000" },
-  { icon: ArrowUpRight, text: "Prepare a payment of AED 2,500 for AWS Cloud Services" },
   { icon: CreditCard, text: "Show my card spending breakdown" },
 ];
 
@@ -36,7 +42,62 @@ export default function Assistant() {
   const { messages, isLoading, sendMessage, executeAction, clearChat } = useAIChat();
   const [input, setInput] = useState("");
   const [executingActions, setExecutingActions] = useState<Record<string, boolean>>({});
+  const [suggestedPrompts, setSuggestedPrompts] = useState<SuggestedPrompt[]>(defaultPrompts);
   const navigate = useNavigate();
+
+  // Fetch real counterparty data for suggested prompts
+  useEffect(() => {
+    const fetchCounterparties = async () => {
+      try {
+        // Fetch beneficiaries for payment suggestions
+        const { data: beneficiaries } = await supabase
+          .from("beneficiaries")
+          .select("name")
+          .eq("organization_id", DEMO_ORG_ID)
+          .eq("is_active", true)
+          .limit(1);
+
+        // Fetch invoice clients for invoice suggestions
+        const { data: invoices } = await supabase
+          .from("invoices")
+          .select("client_name")
+          .eq("organization_id", DEMO_ORG_ID)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        const prompts: SuggestedPrompt[] = [
+          { icon: TrendingUp, text: "What's my current account balance and recent activity?" },
+        ];
+
+        // Add invoice suggestion with real client name
+        if (invoices && invoices.length > 0) {
+          const uniqueClients = [...new Set(invoices.map(inv => inv.client_name))];
+          if (uniqueClients[0]) {
+            prompts.push({
+              icon: FileText,
+              text: `Create an invoice for ${uniqueClients[0]} for AED 5,000`,
+            });
+          }
+        }
+
+        // Add payment suggestion with real beneficiary name
+        if (beneficiaries && beneficiaries.length > 0) {
+          prompts.push({
+            icon: ArrowUpRight,
+            text: `Prepare a payment of AED 2,500 for ${beneficiaries[0].name}`,
+          });
+        }
+
+        prompts.push({ icon: CreditCard, text: "Show my card spending breakdown" });
+
+        setSuggestedPrompts(prompts);
+      } catch (error) {
+        console.error("Failed to fetch counterparties:", error);
+      }
+    };
+
+    fetchCounterparties();
+  }, []);
 
   const handleSend = () => {
     if (!input.trim()) return;
