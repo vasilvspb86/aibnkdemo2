@@ -224,20 +224,14 @@ export function usePaymentsData() {
     mutationFn: async (paymentId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // First, check if a transaction already exists for this payment
-      const { data: existingTx } = await supabase
-        .from("transactions")
-        .select("id")
-        .eq("metadata->>payment_id", paymentId)
-        .maybeSingle();
-      
-      // Get payment details
+      // Get payment details and update to completed immediately
       const { data: payment, error } = await supabase
         .from("payments")
         .update({ 
-          status: "processing",
+          status: "completed",
           approved_by: user?.id,
-          account_id: DEMO_ACCOUNT_ID, // Ensure account_id is set
+          account_id: DEMO_ACCOUNT_ID,
+          processed_at: new Date().toISOString(),
         })
         .eq("id", paymentId)
         .select(`*, beneficiary:beneficiaries(name)`)
@@ -246,9 +240,25 @@ export function usePaymentsData() {
       if (error) throw error;
 
       const counterpartyName = payment.beneficiary?.name || "Recipient";
+      const reference = `PAY-${paymentId.substring(0, 8).toUpperCase()}`;
 
-      // If no transaction exists, create one now
-      if (!existingTx) {
+      // Check if a transaction already exists for this payment
+      const { data: existingTx } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("reference", reference)
+        .maybeSingle();
+
+      if (existingTx) {
+        // Update existing transaction to completed
+        const { error: txError } = await supabase
+          .from("transactions")
+          .update({ status: "completed" })
+          .eq("id", existingTx.id);
+        
+        if (txError) throw txError;
+      } else {
+        // Create new transaction with completed status
         const { error: txCreateError } = await supabase
           .from("transactions")
           .insert({
@@ -256,63 +266,24 @@ export function usePaymentsData() {
             type: "debit",
             amount: payment.amount,
             currency: payment.currency,
-            status: "processing",
+            status: "completed",
             description: `Payment to ${counterpartyName}`,
-            reference: `PAY-${payment.id.substring(0, 8).toUpperCase()}`,
+            reference: reference,
             counterparty_name: counterpartyName,
             category: payment.purpose || "Transfer",
             metadata: { payment_id: payment.id },
           });
         
         if (txCreateError) throw txCreateError;
-      } else {
-        // Update existing transaction to processing
-        const { error: txError } = await supabase
-          .from("transactions")
-          .update({ status: "processing" })
-          .eq("id", existingTx.id);
-        
-        if (txError) console.error("Transaction update error:", txError);
       }
-
-      // Store transaction ID for the completion update
-      const txId = existingTx?.id;
-
-      // Simulate processing and completion after delay
-      setTimeout(async () => {
-        await supabase
-          .from("payments")
-          .update({ 
-            status: "completed",
-            processed_at: new Date().toISOString(),
-          })
-          .eq("id", paymentId);
-        
-        // Find and update the transaction by querying with the payment reference
-        const { data: txToComplete } = await supabase
-          .from("transactions")
-          .select("id")
-          .eq("reference", `PAY-${paymentId.substring(0, 8).toUpperCase()}`)
-          .maybeSingle();
-        
-        if (txToComplete) {
-          await supabase
-            .from("transactions")
-            .update({ status: "completed" })
-            .eq("id", txToComplete.id);
-        }
-        
-        queryClient.invalidateQueries({ queryKey: ["payments"] });
-        queryClient.invalidateQueries({ queryKey: ["transactions"] });
-        queryClient.invalidateQueries({ queryKey: ["account"] });
-      }, 2000);
       
       return payment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      toast.success("Payment approved and processing");
+      queryClient.invalidateQueries({ queryKey: ["account"] });
+      toast.success("Payment approved and completed");
     },
     onError: (error) => {
       toast.error(`Failed to approve payment: ${error.message}`);
