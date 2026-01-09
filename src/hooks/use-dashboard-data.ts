@@ -60,6 +60,23 @@ export function useDashboardData() {
     },
   });
 
+  // Fetch approved expenses
+  const { data: expenses, isLoading: expensesLoading } = useQuery({
+    queryKey: ["expenses-dashboard", DEMO_ORG_ID],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("organization_id", DEMO_ORG_ID)
+        .eq("status", "approved")
+        .order("expense_date", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Combine and sort all transactions
   const transactions = (() => {
     const accountTxs = (accountTransactions || []).map(tx => ({
@@ -84,7 +101,18 @@ export function useDashboardData() {
       source: "card" as const,
     }));
 
-    return [...accountTxs, ...cardTxs]
+    const expenseTxs = (expenses || []).map(exp => ({
+      id: exp.id,
+      type: "debit" as const,
+      amount: Number(exp.amount),
+      currency: exp.currency,
+      description: exp.description || exp.vendor || "Expense",
+      category: exp.category,
+      created_at: exp.expense_date,
+      source: "expense" as const,
+    }));
+
+    return [...accountTxs, ...cardTxs, ...expenseTxs]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 5);
   })();
@@ -166,7 +194,7 @@ export function useDashboardData() {
     },
   });
 
-  const isLoading = accountLoading || transactionsLoading || cardTransactionsLoading || summaryLoading || invoicesLoading || orgLoading;
+  const isLoading = accountLoading || transactionsLoading || cardTransactionsLoading || expensesLoading || summaryLoading || invoicesLoading || orgLoading;
 
   return {
     account,
