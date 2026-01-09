@@ -22,25 +22,95 @@ async function fetchUserContext(supabase: any) {
     });
   }
 
-  // Fetch recent transactions
+  // Fetch recent transactions with more details
   const { data: transactions } = await supabase
     .from("transactions")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(30);
 
   if (transactions?.length) {
-    context.push("\n## Recent Transactions (Last 10)");
-    let totalCredits = 0;
-    let totalDebits = 0;
+    const credits = transactions.filter((tx: any) => tx.type === "credit");
+    const debits = transactions.filter((tx: any) => tx.type === "debit");
+    const totalCredits = credits.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+    const totalDebits = debits.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+    const netFlow = totalCredits - totalDebits;
+    
+    context.push("\n## Account Transactions Overview");
+    context.push(`- Total transactions shown: ${transactions.length}`);
+    context.push(`- Money in (credits): ${credits.length} transactions totaling AED ${totalCredits.toLocaleString()}`);
+    context.push(`- Money out (debits): ${debits.length} transactions totaling AED ${totalDebits.toLocaleString()}`);
+    context.push(`- Net cash flow: ${netFlow >= 0 ? "+" : ""}AED ${netFlow.toLocaleString()}`);
+    
+    // Group by counterparty
+    const byCounterparty: Record<string, { credits: number; debits: number; count: number }> = {};
     transactions.forEach((tx: any) => {
+      const name = tx.counterparty_name || tx.description || "Unknown";
+      if (!byCounterparty[name]) byCounterparty[name] = { credits: 0, debits: 0, count: 0 };
+      byCounterparty[name].count++;
+      if (tx.type === "credit") {
+        byCounterparty[name].credits += Number(tx.amount);
+      } else {
+        byCounterparty[name].debits += Number(tx.amount);
+      }
+    });
+    
+    // Top incoming sources
+    const incomingSources = Object.entries(byCounterparty)
+      .filter(([_, data]) => data.credits > 0)
+      .sort((a, b) => b[1].credits - a[1].credits)
+      .slice(0, 5);
+    
+    if (incomingSources.length > 0) {
+      context.push("\n### Top Money Sources (Incoming):");
+      incomingSources.forEach(([name, data]) => {
+        context.push(`- ${name}: +AED ${data.credits.toLocaleString()} (${data.count} transaction${data.count > 1 ? "s" : ""})`);
+      });
+    }
+    
+    // Top outgoing destinations
+    const outgoingDest = Object.entries(byCounterparty)
+      .filter(([_, data]) => data.debits > 0)
+      .sort((a, b) => b[1].debits - a[1].debits)
+      .slice(0, 5);
+    
+    if (outgoingDest.length > 0) {
+      context.push("\n### Top Spending Destinations (Outgoing):");
+      outgoingDest.forEach(([name, data]) => {
+        context.push(`- ${name}: -AED ${data.debits.toLocaleString()} (${data.count} transaction${data.count > 1 ? "s" : ""})`);
+      });
+    }
+    
+    // Group by category
+    const byCategory: Record<string, { amount: number; count: number; type: string }> = {};
+    transactions.forEach((tx: any) => {
+      const cat = tx.category || "Uncategorized";
+      if (!byCategory[cat]) byCategory[cat] = { amount: 0, count: 0, type: tx.type };
+      byCategory[cat].amount += Number(tx.amount);
+      byCategory[cat].count++;
+    });
+    
+    if (Object.keys(byCategory).length > 1) {
+      context.push("\n### Transactions by Category:");
+      Object.entries(byCategory)
+        .sort((a, b) => b[1].amount - a[1].amount)
+        .forEach(([cat, data]) => {
+          const sign = data.type === "credit" ? "+" : "-";
+          context.push(`- ${cat}: ${sign}AED ${data.amount.toLocaleString()} (${data.count} transactions)`);
+        });
+    }
+    
+    // Recent transactions list
+    context.push("\n### Recent Transactions (Last 15):");
+    transactions.slice(0, 15).forEach((tx: any) => {
       const sign = tx.type === "credit" ? "+" : "-";
       const amount = Number(tx.amount);
-      if (tx.type === "credit") totalCredits += amount;
-      else totalDebits += amount;
-      context.push(`- ${sign}${tx.currency} ${amount.toLocaleString()} | ${tx.counterparty_name || tx.description || "Transaction"} | ${tx.status} | ${new Date(tx.created_at).toLocaleDateString()}`);
+      const date = new Date(tx.created_at).toLocaleDateString();
+      const counterparty = tx.counterparty_name || tx.description || "Transaction";
+      const category = tx.category ? ` [${tx.category}]` : "";
+      const reference = tx.reference ? ` (Ref: ${tx.reference})` : "";
+      context.push(`- ${sign}${tx.currency} ${amount.toLocaleString()} | ${counterparty}${category} | ${tx.status} | ${date}${reference}`);
     });
-    context.push(`\nRecent activity: +${transactions[0]?.currency || "AED"} ${totalCredits.toLocaleString()} credits, -${transactions[0]?.currency || "AED"} ${totalDebits.toLocaleString()} debits`);
   }
 
   // Fetch invoices summary
