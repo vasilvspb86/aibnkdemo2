@@ -498,6 +498,7 @@ export default function Invoices() {
                 <div 
                   key={invoice.id} 
                   className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                  onClick={() => handleEditInvoice(invoice)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -517,7 +518,7 @@ export default function Invoices() {
                     <p className="font-semibold min-w-[120px] text-right tabular-nums">
                       {invoice.currency} {Number(invoice.total).toLocaleString()}
                     </p>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon">
                         <Download className="h-4 w-4" />
                       </Button>
