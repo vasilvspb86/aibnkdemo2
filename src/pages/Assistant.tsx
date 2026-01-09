@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from "react-markdown";
 import { 
   Send, 
   Sparkles, 
@@ -185,8 +186,13 @@ export default function Assistant() {
                       : "bg-muted"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-                  
+                  {message.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                  )}
                   {/* Action Buttons */}
                   {message.actions && message.actions.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
