@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "aibnk_onboarding_data";
 const SYNC_EVENT = "aibnk_onboarding_sync";
+// Hook version - forces rebuild on HMR issues
 
 export interface LocalOnboardingData {
   // Company
