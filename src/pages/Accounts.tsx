@@ -12,7 +12,8 @@ import {
   Search,
   MoreHorizontal,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -59,7 +60,9 @@ export default function Accounts() {
         <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
           tx.type === "credit" ? "bg-accent/10" : "bg-muted"
         }`}>
-          {tx.type === "credit" ? (
+          {tx.source === "card" ? (
+            <CreditCard className="h-5 w-5 text-muted-foreground" />
+          ) : tx.type === "credit" ? (
             <ArrowDownLeft className="h-5 w-5 text-accent" />
           ) : (
             <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
