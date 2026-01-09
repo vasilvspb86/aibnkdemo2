@@ -61,15 +61,17 @@ export function usePaymentsData() {
   // Create payment mutation
   const createPayment = useMutation({
     mutationFn: async (paymentData: {
-      beneficiary_id: string;
-      beneficiary_name: string;
+      beneficiary_id?: string;
+      beneficiary_name?: string;
       amount: number;
       currency: string;
-      reference: string;
-      purpose: string;
+      reference?: string;
+      purpose?: string;
     }) => {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
+      
+      const counterpartyName = paymentData.beneficiary_name || "Recipient";
       
       // Create payment record
       const { data: payment, error: paymentError } = await supabase
@@ -77,11 +79,11 @@ export function usePaymentsData() {
         .insert({
           organization_id: DEMO_ORG_ID,
           account_id: DEMO_ACCOUNT_ID,
-          beneficiary_id: paymentData.beneficiary_id,
+          beneficiary_id: paymentData.beneficiary_id || null,
           amount: paymentData.amount,
           currency: paymentData.currency,
-          reference: paymentData.reference,
-          purpose: paymentData.purpose,
+          reference: paymentData.reference || null,
+          purpose: paymentData.purpose || null,
           status: "pending_approval",
           created_by: user?.id,
         })
@@ -90,7 +92,7 @@ export function usePaymentsData() {
       
       if (paymentError) throw paymentError;
 
-      // Also create a transaction record
+      // Also create a transaction record linked to this payment
       const { error: txError } = await supabase
         .from("transactions")
         .insert({
@@ -99,10 +101,11 @@ export function usePaymentsData() {
           amount: paymentData.amount,
           currency: paymentData.currency,
           status: "pending",
-          description: `Payment to ${paymentData.beneficiary_name}`,
-          reference: paymentData.reference || `PAY-${payment.id.substring(0, 8).toUpperCase()}`,
-          counterparty_name: paymentData.beneficiary_name,
+          description: `Payment to ${counterpartyName}`,
+          reference: `PAY-${payment.id.substring(0, 8).toUpperCase()}`,
+          counterparty_name: counterpartyName,
           category: paymentData.purpose || "Transfer",
+          metadata: { payment_id: payment.id },
         });
       
       if (txError) throw txError;
@@ -221,12 +224,20 @@ export function usePaymentsData() {
     mutationFn: async (paymentId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Update payment status to processing
+      // First, check if a transaction already exists for this payment
+      const { data: existingTx } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("metadata->>payment_id", paymentId)
+        .maybeSingle();
+      
+      // Get payment details
       const { data: payment, error } = await supabase
         .from("payments")
         .update({ 
           status: "processing",
           approved_by: user?.id,
+          account_id: DEMO_ACCOUNT_ID, // Ensure account_id is set
         })
         .eq("id", paymentId)
         .select(`*, beneficiary:beneficiaries(name)`)
@@ -234,17 +245,35 @@ export function usePaymentsData() {
       
       if (error) throw error;
 
-      // Update the related transaction to processing
-      const { error: txError } = await supabase
-        .from("transactions")
-        .update({ status: "processing" })
-        .eq("account_id", DEMO_ACCOUNT_ID)
-        .eq("amount", payment.amount)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(1);
-      
-      if (txError) console.error("Transaction update error:", txError);
+      const counterpartyName = payment.beneficiary?.name || "Recipient";
+
+      // If no transaction exists, create one now
+      if (!existingTx) {
+        const { error: txCreateError } = await supabase
+          .from("transactions")
+          .insert({
+            account_id: DEMO_ACCOUNT_ID,
+            type: "debit",
+            amount: payment.amount,
+            currency: payment.currency,
+            status: "processing",
+            description: `Payment to ${counterpartyName}`,
+            reference: `PAY-${payment.id.substring(0, 8).toUpperCase()}`,
+            counterparty_name: counterpartyName,
+            category: payment.purpose || "Transfer",
+            metadata: { payment_id: payment.id },
+          });
+        
+        if (txCreateError) throw txCreateError;
+      } else {
+        // Update existing transaction to processing
+        const { error: txError } = await supabase
+          .from("transactions")
+          .update({ status: "processing" })
+          .eq("metadata->>payment_id", paymentId);
+        
+        if (txError) console.error("Transaction update error:", txError);
+      }
 
       // Simulate processing and completion after delay
       setTimeout(async () => {
@@ -259,9 +288,7 @@ export function usePaymentsData() {
         await supabase
           .from("transactions")
           .update({ status: "completed" })
-          .eq("account_id", DEMO_ACCOUNT_ID)
-          .eq("amount", payment.amount)
-          .eq("status", "processing");
+          .eq("metadata->>payment_id", paymentId);
         
         queryClient.invalidateQueries({ queryKey: ["payments"] });
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -272,6 +299,7 @@ export function usePaymentsData() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       toast.success("Payment approved and processing");
     },
     onError: (error) => {
@@ -291,13 +319,11 @@ export function usePaymentsData() {
       
       if (error) throw error;
 
-      // Cancel related transaction
+      // Cancel related transaction using payment_id in metadata
       await supabase
         .from("transactions")
         .update({ status: "cancelled" })
-        .eq("account_id", DEMO_ACCOUNT_ID)
-        .eq("amount", payment.amount)
-        .eq("status", "pending");
+        .eq("metadata->>payment_id", paymentId);
       
       return payment;
     },
