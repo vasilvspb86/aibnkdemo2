@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, CheckCircle2, AlertCircle, CreditCard, ArrowDownLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ interface Notification {
   time: string;
   read: boolean;
   type: "success" | "alert" | "payment" | "card";
+  path: string;
 }
 
 const mockNotifications: Notification[] = [
@@ -26,6 +28,7 @@ const mockNotifications: Notification[] = [
     time: "2 mins ago",
     read: false,
     type: "payment",
+    path: "/accounts",
   },
   {
     id: "2",
@@ -34,6 +37,7 @@ const mockNotifications: Notification[] = [
     time: "1 hour ago",
     read: false,
     type: "alert",
+    path: "/onboarding/status",
   },
   {
     id: "3",
@@ -42,6 +46,7 @@ const mockNotifications: Notification[] = [
     time: "3 hours ago",
     read: true,
     type: "card",
+    path: "/cards",
   },
   {
     id: "4",
@@ -50,6 +55,7 @@ const mockNotifications: Notification[] = [
     time: "Yesterday",
     read: true,
     type: "success",
+    path: "/payments",
   },
 ];
 
@@ -69,6 +75,7 @@ const getIcon = (type: Notification["type"]) => {
 export function NotificationDropdown() {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -76,10 +83,12 @@ export function NotificationDropdown() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const markAsRead = (id: string) => {
+  const handleNotificationClick = (notification: Notification) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
     );
+    setOpen(false);
+    navigate(notification.path);
   };
 
   return (
@@ -120,7 +129,7 @@ export function NotificationDropdown() {
                     "w-full flex items-start gap-3 p-4 text-left hover:bg-muted/50 transition-colors",
                     !notification.read && "bg-primary/5"
                   )}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                     {getIcon(notification.type)}
