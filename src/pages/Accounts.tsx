@@ -179,7 +179,7 @@ export default function Accounts() {
                   <Skeleton className="h-5 w-32 bg-white/20" />
                 ) : (
                   <>
-                    <p className="font-mono text-sm">{iban.slice(0, 4)}...{iban.slice(-4)}</p>
+                    <p className="font-mono text-sm">{iban.replace(/(.{4})/g, '$1 ').trim()}</p>
                     <button 
                       onClick={() => copyToClipboard(iban, 'iban')}
                       className="opacity-60 hover:opacity-100"
