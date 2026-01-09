@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "aibnk_onboarding_data";
+const SYNC_EVENT = "aibnk_onboarding_sync";
 
 export interface LocalOnboardingData {
   // Company
@@ -100,10 +101,37 @@ export function useLocalOnboarding() {
     setIsLoading(false);
   }, []);
 
-  // Save to localStorage whenever data changes
+  // Listen for sync events from other hook instances
+  useEffect(() => {
+    const handleSync = () => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          setData(JSON.parse(stored));
+        } catch {
+          // ignore parse errors
+        }
+      }
+    };
+
+    // Listen for custom sync event (same window)
+    window.addEventListener(SYNC_EVENT, handleSync);
+    // Listen for storage event (cross-tab)
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORAGE_KEY) handleSync();
+    });
+
+    return () => {
+      window.removeEventListener(SYNC_EVENT, handleSync);
+    };
+  }, []);
+
+  // Save to localStorage and notify other hook instances
   const saveData = useCallback((newData: LocalOnboardingData) => {
     setData(newData);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+    // Notify other hook instances in the same window
+    window.dispatchEvent(new Event(SYNC_EVENT));
   }, []);
 
   const updateCompany = useCallback((company: Partial<LocalOnboardingData["company"]>) => {
@@ -137,6 +165,7 @@ export function useLocalOnboarding() {
         currentData.documents[docType].status = "validating";
         localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
         setData(currentData);
+        window.dispatchEvent(new Event(SYNC_EVENT));
       }
     }, 1000);
 
@@ -146,6 +175,7 @@ export function useLocalOnboarding() {
         currentData.documents[docType].status = "accepted";
         localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
         setData(currentData);
+        window.dispatchEvent(new Event(SYNC_EVENT));
       }
     }, 3000);
   }, [data, saveData]);
