@@ -63,22 +63,6 @@ export function useAccountData() {
     },
   });
 
-  // Fetch approved expenses
-  const { data: expenses, isLoading: expensesLoading } = useQuery({
-    queryKey: ["expenses-account", DEMO_ORG_ID],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("*")
-        .eq("organization_id", DEMO_ORG_ID)
-        .eq("status", "approved")
-        .order("expense_date", { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
   // Combine and normalize all transactions
   const allTransactions = useMemo(() => {
     const accountTxs = (accountTransactions || []).map(tx => ({
@@ -109,23 +93,9 @@ export function useAccountData() {
       source: "card" as const,
     }));
 
-    const expenseTxs = (expenses || []).map(exp => ({
-      id: exp.id,
-      type: "debit" as const,
-      amount: Number(exp.amount),
-      currency: exp.currency,
-      description: exp.description || exp.vendor || "Expense",
-      counterparty_name: exp.vendor,
-      reference: `Expense`,
-      category: exp.category,
-      created_at: exp.expense_date,
-      status: exp.status,
-      source: "expense" as const,
-    }));
-
-    return [...accountTxs, ...cardTxs, ...expenseTxs]
+    return [...accountTxs, ...cardTxs]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [accountTransactions, cardTransactions, expenses]);
+  }, [accountTransactions, cardTransactions]);
 
   // Filter transactions based on search and type
   const transactions = useMemo(() => {
@@ -172,7 +142,7 @@ export function useAccountData() {
     transactions,
     allTransactions,
     stats,
-    isLoading: accountLoading || transactionsLoading || cardTransactionsLoading || expensesLoading,
+    isLoading: accountLoading || transactionsLoading || cardTransactionsLoading,
     searchQuery,
     setSearchQuery,
     typeFilter,
