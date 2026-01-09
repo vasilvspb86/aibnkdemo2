@@ -224,7 +224,7 @@ export function usePaymentsData() {
     mutationFn: async (paymentId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Get payment details and update to completed immediately
+      // Update payment to completed
       const { data: payment, error } = await supabase
         .from("payments")
         .update({ 
@@ -240,25 +240,20 @@ export function usePaymentsData() {
       if (error) throw error;
 
       const counterpartyName = payment.beneficiary?.name || "Recipient";
-      const reference = `PAY-${paymentId.substring(0, 8).toUpperCase()}`;
 
-      // Check if a transaction already exists for this payment
-      const { data: existingTx } = await supabase
+      // Try to update existing transaction by metadata->>'payment_id' (most reliable)
+      const { data: updatedTx, error: updateError } = await supabase
         .from("transactions")
+        .update({ status: "completed" })
+        .eq("account_id", DEMO_ACCOUNT_ID)
+        .filter("metadata->>payment_id", "eq", paymentId)
         .select("id")
-        .eq("reference", reference)
         .maybeSingle();
 
-      if (existingTx) {
-        // Update existing transaction to completed
-        const { error: txError } = await supabase
-          .from("transactions")
-          .update({ status: "completed" })
-          .eq("id", existingTx.id);
-        
-        if (txError) throw txError;
-      } else {
-        // Create new transaction with completed status
+      if (updateError) throw updateError;
+
+      // If no transaction was updated, create a new completed transaction
+      if (!updatedTx) {
         const { error: txCreateError } = await supabase
           .from("transactions")
           .insert({
@@ -268,7 +263,7 @@ export function usePaymentsData() {
             currency: payment.currency,
             status: "completed",
             description: `Payment to ${counterpartyName}`,
-            reference: reference,
+            reference: `PAY-${paymentId.substring(0, 8).toUpperCase()}`,
             counterparty_name: counterpartyName,
             category: payment.purpose || "Transfer",
             metadata: { payment_id: payment.id },
@@ -283,7 +278,6 @@ export function usePaymentsData() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
-      // Accounts page uses different query keys, so make sure we refresh those too
       queryClient.invalidateQueries({ queryKey: ["account-transactions", DEMO_ACCOUNT_ID] });
       queryClient.invalidateQueries({ queryKey: ["account-details", DEMO_ACCOUNT_ID] });
       toast.success("Payment approved and completed");
@@ -305,11 +299,12 @@ export function usePaymentsData() {
       
       if (error) throw error;
 
-      // Cancel related transaction using payment_id in metadata
+      // Cancel related transaction using metadata->>'payment_id'
       await supabase
         .from("transactions")
         .update({ status: "cancelled" })
-        .eq("metadata->>payment_id", paymentId);
+        .eq("account_id", DEMO_ACCOUNT_ID)
+        .filter("metadata->>payment_id", "eq", paymentId);
       
       return payment;
     },
@@ -317,6 +312,8 @@ export function usePaymentsData() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
+      queryClient.invalidateQueries({ queryKey: ["account-transactions", DEMO_ACCOUNT_ID] });
+      queryClient.invalidateQueries({ queryKey: ["account-details", DEMO_ACCOUNT_ID] });
       toast.success("Payment cancelled");
     },
     onError: (error) => {
