@@ -36,7 +36,8 @@ import {
   User,
   Loader2,
   Pencil,
-  MoreHorizontal
+  MoreHorizontal,
+  Trash2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -84,6 +85,7 @@ export default function Payments() {
     updatePayment,
     approvePayment,
     cancelPayment,
+    deletePayment,
   } = usePaymentsData();
 
   const copyLink = (linkCode: string) => {
@@ -198,6 +200,10 @@ export default function Payments() {
 
   const handleCancelPayment = async (paymentId: string) => {
     await cancelPayment.mutateAsync(paymentId);
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    await deletePayment.mutateAsync(paymentId);
   };
 
   const resetPaymentForm = () => {
@@ -695,7 +701,7 @@ export default function Payments() {
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="bg-popover">
                               {payment.status === "draft" && (
                                 <>
                                   <DropdownMenuItem onClick={() => handleEditPayment(payment)}>
@@ -706,6 +712,14 @@ export default function Payments() {
                                     <Check className="h-4 w-4 mr-2" />
                                     Submit for Approval
                                   </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeletePayment(payment.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
                                 </>
                               )}
                               {payment.status === "pending_approval" && (
@@ -714,16 +728,16 @@ export default function Payments() {
                                     <Check className="h-4 w-4 mr-2" />
                                     Approve
                                   </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleCancelPayment(payment.id)}
+                                    className="text-destructive"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Cancel
+                                  </DropdownMenuItem>
                                 </>
                               )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleCancelPayment(payment.id)}
-                                className="text-destructive"
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Cancel
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}

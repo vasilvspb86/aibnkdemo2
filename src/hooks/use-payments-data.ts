@@ -312,6 +312,27 @@ export function usePaymentsData() {
     },
   });
 
+  // Delete draft payment mutation
+  const deletePayment = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const { error } = await supabase
+        .from("payments")
+        .delete()
+        .eq("id", paymentId)
+        .eq("status", "draft"); // Only allow deleting drafts
+      
+      if (error) throw error;
+      return paymentId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      toast.success("Draft payment deleted");
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete payment: ${error.message}`);
+    },
+  });
+
   return {
     beneficiaries,
     payments,
@@ -323,6 +344,7 @@ export function usePaymentsData() {
     updatePayment,
     approvePayment,
     cancelPayment,
+    deletePayment,
   };
 }
 
