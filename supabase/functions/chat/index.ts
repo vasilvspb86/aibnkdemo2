@@ -166,18 +166,73 @@ async function fetchUserContext(supabase: any) {
     }
   }
 
-  // Fetch cards summary
+  // Fetch cards with controls
   const { data: cards } = await supabase
     .from("cards")
-    .select("*")
-    .limit(5);
+    .select("*, card_controls(*)")
+    .limit(10);
 
   if (cards?.length) {
     context.push("\n## Cards Summary");
+    context.push(`Total cards: ${cards.length}`);
+    
     cards.forEach((card: any) => {
       const limitInfo = card.spending_limit ? `Limit: AED ${Number(card.spending_limit).toLocaleString()}` : "No limit set";
-      context.push(`- ${card.cardholder_name} (${card.card_type}, ****${card.card_number_last4 || "****"}): ${card.status} | ${limitInfo}`);
+      const monthlyLimit = card.card_controls?.[0]?.monthly_limit;
+      context.push(`- ${card.cardholder_name} (${card.card_type}, ****${card.card_number_last4 || "****"}): ${card.status} | ${limitInfo}${monthlyLimit ? ` | Monthly limit: AED ${Number(monthlyLimit).toLocaleString()}` : ""}`);
     });
+    
+    // Fetch card transactions
+    const cardIds = cards.map((c: any) => c.id);
+    const { data: cardTransactions } = await supabase
+      .from("card_transactions")
+      .select("*")
+      .in("card_id", cardIds)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    
+    if (cardTransactions?.length) {
+      const totalSpent = cardTransactions.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+      
+      context.push("\n## Card Transactions (Recent)");
+      context.push(`Total spent on cards recently: AED ${totalSpent.toLocaleString()}`);
+      
+      // Group by card
+      const txByCard: Record<string, any[]> = {};
+      cardTransactions.forEach((tx: any) => {
+        if (!txByCard[tx.card_id]) txByCard[tx.card_id] = [];
+        txByCard[tx.card_id].push(tx);
+      });
+      
+      // Show transactions by card
+      cards.forEach((card: any) => {
+        const cardTxs = txByCard[card.id] || [];
+        if (cardTxs.length > 0) {
+          const cardTotal = cardTxs.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+          context.push(`\n### ${card.cardholder_name} (****${card.card_number_last4 || "****"}) - Spent: AED ${cardTotal.toLocaleString()}`);
+          cardTxs.slice(0, 5).forEach((tx: any) => {
+            const date = new Date(tx.created_at).toLocaleDateString();
+            context.push(`- ${tx.currency} ${Number(tx.amount).toLocaleString()} | ${tx.merchant_name || "Unknown merchant"} | ${tx.merchant_category || "General"} | ${tx.status} | ${date}`);
+          });
+        }
+      });
+      
+      // Spending by category
+      const byCategory: Record<string, number> = {};
+      cardTransactions.forEach((tx: any) => {
+        const cat = tx.merchant_category || "Other";
+        byCategory[cat] = (byCategory[cat] || 0) + Number(tx.amount);
+      });
+      
+      if (Object.keys(byCategory).length > 0) {
+        context.push("\n### Card Spending by Category:");
+        Object.entries(byCategory)
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([cat, amount]) => {
+            context.push(`- ${cat}: AED ${amount.toLocaleString()}`);
+          });
+      }
+    }
   }
 
   return context.join("\n");
