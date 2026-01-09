@@ -681,7 +681,7 @@ export default function Payments() {
                             {(payment as any).beneficiary?.name || "Unknown Beneficiary"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {payment.reference || "—"} • {formatPaymentDate(payment.created_at)}
+                            {payment.reference || "Other"} • {formatPaymentDate(payment.created_at)}
                           </p>
                         </div>
                       </div>
