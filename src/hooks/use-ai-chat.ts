@@ -3,7 +3,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatAction {
-  type: "create_invoice" | "create_payment" | "approve_expense" | "view_account";
+  type: "create_invoice" | "create_payment" | "approve_expense" | "view_account" | "navigate";
   label: string;
   data?: Record<string, any>;
   executed?: boolean;
@@ -19,15 +19,25 @@ export interface ChatMessage {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const DEMO_ORG_ID = "11111111-1111-1111-1111-111111111111";
-const DEMO_ACCOUNT_ID = "22222222-2222-2222-2222-222222222222";
 
 // Parse AI response for action suggestions
-function parseActionsFromResponse(content: string): ChatAction[] {
+function parseActionsFromResponse(content: string, navigationTarget?: { path: string; label: string; id?: string }): ChatAction[] {
   const actions: ChatAction[] = [];
   
-  // Detect invoice creation intent
-  if (content.toLowerCase().includes("create") && content.toLowerCase().includes("invoice")) {
-    // Try to extract client name and amount from context
+  // If we have a navigation target, add that first
+  if (navigationTarget) {
+    actions.push({
+      type: "navigate",
+      label: navigationTarget.label,
+      data: { 
+        path: navigationTarget.path,
+        id: navigationTarget.id,
+      },
+    });
+  }
+  
+  // Detect invoice creation intent (only if not navigating)
+  if (!navigationTarget && content.toLowerCase().includes("create") && content.toLowerCase().includes("invoice")) {
     const amountMatch = content.match(/(?:AED|USD|EUR)\s*([\d,]+(?:\.\d{2})?)/i);
     const clientMatch = content.match(/(?:for|to|client[:\s]+)([A-Za-z\s]+?)(?:\s*[-–—]|\s*for|\s*\.|,|\n|$)/i);
     
@@ -41,8 +51,8 @@ function parseActionsFromResponse(content: string): ChatAction[] {
     });
   }
   
-  // Detect payment intent
-  if ((content.toLowerCase().includes("pay") || content.toLowerCase().includes("payment")) && 
+  // Detect payment intent (only if not navigating)
+  if (!navigationTarget && (content.toLowerCase().includes("pay") || content.toLowerCase().includes("payment")) && 
       (content.toLowerCase().includes("prepare") || content.toLowerCase().includes("create") || content.toLowerCase().includes("send"))) {
     const amountMatch = content.match(/(?:AED|USD|EUR)\s*([\d,]+(?:\.\d{2})?)/i);
     const vendorMatch = content.match(/(?:to|vendor|pay)\s+([A-Za-z\s]+?)(?:\s*[-–—]|\s*for|\s*\.|,|\n|$)/i);
@@ -58,6 +68,138 @@ function parseActionsFromResponse(content: string): ChatAction[] {
   }
 
   return actions;
+}
+
+// Detect navigation intent from user message and find matching entity
+async function detectNavigationIntent(userMessage: string): Promise<{ path: string; label: string; id?: string } | null> {
+  const msg = userMessage.toLowerCase();
+  
+  // Common navigation phrases
+  const openPhrases = ["open", "show", "view", "go to", "take me to", "navigate to", "see", "find"];
+  const hasOpenIntent = openPhrases.some(phrase => msg.includes(phrase));
+  
+  if (!hasOpenIntent) return null;
+  
+  // Detect invoice navigation
+  if (msg.includes("invoice")) {
+    // Try to find invoice by number pattern (INV-XXXXX)
+    const invoiceNumberMatch = userMessage.match(/inv[-\s]?(\d+)/i);
+    if (invoiceNumberMatch) {
+      const searchPattern = `INV-${invoiceNumberMatch[1]}`;
+      const { data: invoice } = await supabase
+        .from("invoices")
+        .select("id, invoice_number")
+        .eq("organization_id", DEMO_ORG_ID)
+        .ilike("invoice_number", `%${invoiceNumberMatch[1]}%`)
+        .limit(1)
+        .maybeSingle();
+      
+      if (invoice) {
+        return {
+          path: `/invoices?edit=${invoice.id}`,
+          label: `Open Invoice ${invoice.invoice_number}`,
+          id: invoice.id,
+        };
+      }
+    }
+    
+    // Try to find by client name
+    const clientMatch = userMessage.match(/(?:invoice\s+(?:for|from|to)\s+)([a-zA-Z\s]+?)(?:\s*$|[,.])/i);
+    if (clientMatch) {
+      const clientName = clientMatch[1].trim();
+      const { data: invoice } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, client_name")
+        .eq("organization_id", DEMO_ORG_ID)
+        .ilike("client_name", `%${clientName}%`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (invoice) {
+        return {
+          path: `/invoices?edit=${invoice.id}`,
+          label: `Open Invoice for ${invoice.client_name}`,
+          id: invoice.id,
+        };
+      }
+    }
+    
+    // Just go to invoices page
+    return { path: "/invoices", label: "Go to Invoices" };
+  }
+  
+  // Detect payment navigation
+  if (msg.includes("payment")) {
+    // Try to find by beneficiary/vendor name
+    const vendorMatch = userMessage.match(/(?:payment\s+(?:to|for)\s+)([a-zA-Z\s]+?)(?:\s*$|[,.])/i);
+    if (vendorMatch) {
+      const vendorName = vendorMatch[1].trim();
+      const { data: payment } = await supabase
+        .from("payments")
+        .select("id, beneficiaries(name)")
+        .eq("organization_id", DEMO_ORG_ID)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      
+      // Find payment with matching beneficiary
+      const matchingPayment = payment?.find((p: any) => 
+        p.beneficiaries?.name?.toLowerCase().includes(vendorName.toLowerCase())
+      );
+      
+      if (matchingPayment) {
+        return {
+          path: `/payments?view=${matchingPayment.id}`,
+          label: `Open Payment to ${(matchingPayment as any).beneficiaries?.name}`,
+          id: matchingPayment.id,
+        };
+      }
+    }
+    
+    return { path: "/payments", label: "Go to Payments" };
+  }
+  
+  // Detect beneficiary/counterparty navigation
+  if (msg.includes("beneficiar") || msg.includes("counterpart") || msg.includes("vendor") || msg.includes("supplier")) {
+    const nameMatch = userMessage.match(/(?:beneficiary|counterparty|vendor|supplier)\s+([a-zA-Z\s]+?)(?:\s*$|[,.])/i);
+    if (nameMatch) {
+      const name = nameMatch[1].trim();
+      const { data: beneficiary } = await supabase
+        .from("beneficiaries")
+        .select("id, name")
+        .eq("organization_id", DEMO_ORG_ID)
+        .ilike("name", `%${name}%`)
+        .limit(1)
+        .maybeSingle();
+      
+      if (beneficiary) {
+        return {
+          path: `/payments?beneficiary=${beneficiary.id}`,
+          label: `View ${beneficiary.name}`,
+          id: beneficiary.id,
+        };
+      }
+    }
+    
+    return { path: "/payments", label: "Go to Payments" };
+  }
+  
+  // Detect expense navigation
+  if (msg.includes("expense")) {
+    return { path: "/expenses", label: "Go to Expenses" };
+  }
+  
+  // Detect card navigation
+  if (msg.includes("card")) {
+    return { path: "/cards", label: "Go to Cards" };
+  }
+  
+  // Detect account navigation
+  if (msg.includes("account") || msg.includes("balance") || msg.includes("transaction")) {
+    return { path: "/accounts", label: "Go to Accounts" };
+  }
+  
+  return null;
 }
 
 async function streamChat({
@@ -184,6 +326,9 @@ export function useAIChat() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
+    // Check for navigation intent before sending to AI
+    const navigationTarget = await detectNavigationIntent(content);
+
     let assistantContent = "";
 
     const updateAssistant = (chunk: string) => {
@@ -216,8 +361,8 @@ export function useAIChat() {
       messages: apiMessages,
       onDelta: updateAssistant,
       onDone: (fullContent) => {
-        // Parse for actions after streaming is complete
-        const actions = parseActionsFromResponse(fullContent);
+        // Parse for actions after streaming is complete, including navigation
+        const actions = parseActionsFromResponse(fullContent, navigationTarget);
         
         setMessages((prev) =>
           prev.map((m) =>
