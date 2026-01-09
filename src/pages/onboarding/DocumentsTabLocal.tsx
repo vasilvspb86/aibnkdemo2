@@ -14,6 +14,7 @@ import {
   Clock,
   Building2,
   User,
+  SkipForward,
 } from "lucide-react";
 import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
 import { toast } from "sonner";
@@ -81,7 +82,7 @@ const statusConfig: Record<string, { label: string; icon: typeof CheckCircle2; c
 
 export default function DocumentsTabLocal() {
   const navigate = useNavigate();
-  const { data, addDocument, isLoading } = useLocalOnboarding();
+  const { data, addDocument, skipDocuments, isLoading } = useLocalOnboarding();
   const [uploadingType, setUploadingType] = useState<DocType | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -265,8 +266,30 @@ export default function DocumentsTabLocal() {
         <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>
-            Please upload all required documents to proceed. Documents marked with * are required.
+            Please upload all required documents to proceed, or skip for now and upload them later from your profile settings.
           </span>
+        </div>
+      )}
+
+      {/* Skip for now option */}
+      {!allRequiredAccepted && (
+        <div className="flex items-center justify-between p-4 rounded-lg border border-dashed bg-muted/30">
+          <div>
+            <p className="font-medium text-sm">Don't have all documents ready?</p>
+            <p className="text-xs text-muted-foreground">
+              You can skip this step and upload documents later. Your account will have limited functionality until verification is complete.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              skipDocuments();
+              navigate("/signup");
+            }}
+          >
+            <SkipForward className="w-4 h-4 mr-2" />
+            Skip for now
+          </Button>
         </div>
       )}
 

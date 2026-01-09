@@ -49,6 +49,7 @@ export interface LocalOnboardingData {
   };
   // Meta
   submitted: boolean;
+  documentsSkipped: boolean;
   created_at: string;
 }
 
@@ -81,6 +82,7 @@ const getDefaultData = (): LocalOnboardingData => ({
   },
   documents: {},
   submitted: false,
+  documentsSkipped: false,
   created_at: new Date().toISOString(),
 });
 
@@ -184,6 +186,10 @@ export function useLocalOnboarding() {
     saveData({ ...data, submitted: true });
   }, [data, saveData]);
 
+  const skipDocuments = useCallback(() => {
+    saveData({ ...data, documentsSkipped: true });
+  }, [data, saveData]);
+
   const clearData = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setData(getDefaultData());
@@ -236,6 +242,7 @@ export function useLocalOnboarding() {
     updateCompliance,
     addDocument,
     markSubmitted,
+    skipDocuments,
     clearData,
     hasData,
     progress: calculateProgress(),
