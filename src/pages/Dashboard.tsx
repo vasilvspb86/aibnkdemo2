@@ -10,7 +10,11 @@ import {
   FileText, 
   ArrowRight,
   Building2,
-  Sparkles
+  Sparkles,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDashboardData, formatRelativeTime } from "@/hooks/use-dashboard-data";
@@ -31,6 +35,7 @@ export default function Dashboard() {
     transactionSummary, 
     pendingInvoices, 
     organization,
+    kybApplication,
     isLoading 
   } = useDashboardData();
 
@@ -46,6 +51,74 @@ export default function Dashboard() {
   };
 
   const userName = getUserName();
+
+  // KYB status configuration
+  const getKybStatusConfig = () => {
+    const status = kybApplication?.status || "draft";
+    
+    const configs: Record<string, { 
+      title: string; 
+      description: string; 
+      badge: string; 
+      icon: typeof CheckCircle2;
+      colors: { border: string; bg: string; iconBg: string; iconColor: string; badgeBorder: string; badgeText: string }
+    }> = {
+      draft: {
+        title: "Application Started",
+        description: "Complete your KYB application to activate your account",
+        badge: "Draft",
+        icon: Clock,
+        colors: { border: "border-muted", bg: "bg-muted/30", iconBg: "bg-muted", iconColor: "text-muted-foreground", badgeBorder: "border-muted-foreground", badgeText: "text-muted-foreground" }
+      },
+      submitted: {
+        title: "Application Submitted",
+        description: "Your application is in queue for review",
+        badge: "Submitted",
+        icon: Clock,
+        colors: { border: "border-primary/30", bg: "bg-primary/5", iconBg: "bg-primary/20", iconColor: "text-primary", badgeBorder: "border-primary", badgeText: "text-primary" }
+      },
+      in_review: {
+        title: "Under Review",
+        description: "We're verifying your business documents",
+        badge: "In Review",
+        icon: Clock,
+        colors: { border: "border-warning/30", bg: "bg-warning/5", iconBg: "bg-warning/20", iconColor: "text-warning", badgeBorder: "border-warning", badgeText: "text-warning" }
+      },
+      needs_info: {
+        title: "Additional Information Required",
+        description: "Please provide the requested documents to continue",
+        badge: "Action Needed",
+        icon: AlertCircle,
+        colors: { border: "border-destructive/30", bg: "bg-destructive/5", iconBg: "bg-destructive/20", iconColor: "text-destructive", badgeBorder: "border-destructive", badgeText: "text-destructive" }
+      },
+      approved: {
+        title: "Application Approved",
+        description: "Your account is being set up",
+        badge: "Approved",
+        icon: CheckCircle2,
+        colors: { border: "border-accent/30", bg: "bg-accent/5", iconBg: "bg-accent/20", iconColor: "text-accent", badgeBorder: "border-accent", badgeText: "text-accent" }
+      },
+      account_ready: {
+        title: "Account Verified",
+        description: "Your business account is fully active",
+        badge: "Active",
+        icon: CheckCircle2,
+        colors: { border: "border-accent/30", bg: "bg-accent/5", iconBg: "bg-accent/20", iconColor: "text-accent", badgeBorder: "border-accent", badgeText: "text-accent" }
+      },
+      rejected: {
+        title: "Application Declined",
+        description: "Please contact support for more information",
+        badge: "Rejected",
+        icon: XCircle,
+        colors: { border: "border-destructive/30", bg: "bg-destructive/5", iconBg: "bg-destructive/20", iconColor: "text-destructive", badgeBorder: "border-destructive", badgeText: "text-destructive" }
+      },
+    };
+    
+    return configs[status] || configs.draft;
+  };
+
+  const kybConfig = getKybStatusConfig();
+  const KybIcon = kybConfig.icon;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -66,18 +139,20 @@ export default function Dashboard() {
       </div>
 
       {/* KYB Status Banner */}
-      <Card className="border-accent/30 bg-accent/5">
+      <Card className={`${kybConfig.colors.border} ${kybConfig.colors.bg}`}>
         <CardContent className="flex items-center justify-between py-4">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-accent" />
+            <div className={`h-10 w-10 rounded-full ${kybConfig.colors.iconBg} flex items-center justify-center`}>
+              <KybIcon className={`h-5 w-5 ${kybConfig.colors.iconColor}`} />
             </div>
             <div>
-              <p className="font-medium">Account verified</p>
-              <p className="text-sm text-muted-foreground">Your business account is fully active</p>
+              <p className="font-medium">{kybConfig.title}</p>
+              <p className="text-sm text-muted-foreground">{kybConfig.description}</p>
             </div>
           </div>
-          <Badge variant="outline" className="border-accent text-accent">Active</Badge>
+          <Badge variant="outline" className={`${kybConfig.colors.badgeBorder} ${kybConfig.colors.badgeText}`}>
+            {kybConfig.badge}
+          </Badge>
         </CardContent>
       </Card>
 
