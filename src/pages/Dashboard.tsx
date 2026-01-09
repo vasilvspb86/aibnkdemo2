@@ -230,26 +230,28 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-32" />
-            ) : (
-              <>
-                <p className="text-2xl font-display font-bold">
-                  AED {(pendingInvoices?.total || 0).toLocaleString()}
-                </p>
-                <p className="text-xs text-warning mt-1">
-                  {pendingInvoices?.count || 0} invoices awaiting payment
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <Link to="/invoices" className="block">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Invoices</CardTitle>
+              <FileText className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-32" />
+              ) : (
+                <>
+                  <p className="text-2xl font-display font-bold">
+                    AED {(pendingInvoices?.total || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-warning mt-1">
+                    {pendingInvoices?.count || 0} invoices awaiting payment
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Quick Actions */}
