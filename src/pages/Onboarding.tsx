@@ -21,7 +21,8 @@ import {
   ArrowLeft,
   Sparkles
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
 const steps = [
   { id: 1, title: "Company Details", icon: Building2 },
@@ -31,9 +32,11 @@ const steps = [
 ];
 
 export default function Onboarding() {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
   const progress = (currentStep / steps.length) * 100;
+  const logoLink = user ? "/dashboard" : "/";
 
   const nextStep = () => {
     if (currentStep < steps.length) {
@@ -53,7 +56,7 @@ export default function Onboarding() {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div className="hidden lg:flex w-80 bg-sidebar p-8 flex-col">
-        <div className="flex items-center gap-3 mb-12">
+        <Link to={logoLink} className="flex items-center gap-3 mb-12 hover:opacity-80 transition-opacity">
           <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -61,7 +64,7 @@ export default function Onboarding() {
             <h1 className="font-display font-bold text-lg text-sidebar-foreground">AIBNK</h1>
             <p className="text-xs text-sidebar-foreground/60">Business Banking</p>
           </div>
-        </div>
+        </Link>
 
         <div className="space-y-2">
           {steps.map((step, index) => (
