@@ -41,16 +41,30 @@ import { useCardsData, formatCardExpiry, formatRelativeDate } from "@/hooks/use-
 
 const categoryIcons: Record<string, React.ElementType> = {
   shopping: ShoppingCart,
+  Shopping: ShoppingCart,
   travel: Plane,
+  Travel: Plane,
   dining: Utensils,
+  "Food & Dining": Utensils,
+  "Food & Beverage": Utensils,
   transport: Car,
+  Transport: Car,
+  Software: Settings,
+  Office: Settings,
 };
 
 const categoryLabels: Record<string, string> = {
-  shopping: "Online Shopping",
+  shopping: "Shopping",
+  Shopping: "Shopping",
   travel: "Travel & Airlines",
-  dining: "Restaurants & Dining",
-  transport: "Transport & Ride-sharing",
+  Travel: "Travel & Airlines",
+  dining: "Dining",
+  "Food & Dining": "Food & Dining",
+  "Food & Beverage": "Food & Beverage",
+  transport: "Transport",
+  Transport: "Transport",
+  Software: "Software & Tech",
+  Office: "Office & Workspace",
 };
 
 export default function Cards() {
@@ -62,6 +76,7 @@ export default function Cards() {
     toggleCardFreeze,
     getCardTransactions,
     getCardStats,
+    getCategorySpending,
   } = useCardsData();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -84,6 +99,7 @@ export default function Cards() {
   const cardControls = selectedCard?.card_controls?.[0];
   const cardTransactions = selectedCardId ? getCardTransactions(selectedCardId) : [];
   const cardStats = selectedCardId ? getCardStats(selectedCardId) : { totalSpent: 0, transactionCount: 0, avgTransaction: 0 };
+  const categorySpending = selectedCardId ? getCategorySpending(selectedCardId) : [];
   
   const [spendLimit, setSpendLimit] = useState<number[]>([cardControls?.monthly_limit || 50000]);
 
@@ -448,30 +464,48 @@ export default function Cards() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Category Controls</CardTitle>
-              <CardDescription>Enable or disable spending categories</CardDescription>
+              <CardTitle className="text-lg">Spending by Category</CardTitle>
+              <CardDescription>Breakdown of your card spending</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {["shopping", "travel", "dining", "transport"].map((category) => {
-                const Icon = categoryIcons[category] || ShoppingCart;
-                const isEnabled = cardControls?.allowed_categories?.includes(category) ?? true;
-                
-                return (
-                  <div key={category} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+              {categorySpending.length > 0 ? (
+                categorySpending.map(({ category, amount, count }) => {
+                  const Icon = categoryIcons[category] || ShoppingCart;
+                  const percentage = cardStats.totalSpent > 0 
+                    ? Math.round((amount / cardStats.totalSpent) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div key={category} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">{categoryLabels[category] || category}</span>
+                            <p className="text-xs text-muted-foreground">{count} transaction{count !== 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">AED {amount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{percentage}%</p>
+                        </div>
                       </div>
-                      <span className="text-sm">{categoryLabels[category]}</span>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <Switch 
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => handleCategoryToggle(category, checked)}
-                      disabled={!selectedCard}
-                    />
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">No spending data yet</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
