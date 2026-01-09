@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Building2, ArrowRight, CheckCircle2, Zap, Shield, TrendingUp, CreditCard, FileText, Sparkles, Globe, Clock, Users } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+
 const features = [{
   icon: Zap,
   title: "60-Second Onboarding",
@@ -28,6 +30,7 @@ const features = [{
   title: "Multi-Currency Ready",
   description: "Send and receive payments globally with competitive FX rates."
 }];
+
 const stats = [{
   value: "< 10 min",
   label: "Account Opening"
@@ -41,21 +44,38 @@ const stats = [{
   value: "150+",
   label: "Countries Supported"
 }];
+
 export default function Landing() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  };
+
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
+          <div 
+            onClick={handleLogoClick}
+            className={`flex items-center gap-3 ${user ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+          >
             <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center">
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="font-display font-bold text-xl">AIBNK</span>
-          </Link>
+          </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-            <Link to="/signin" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link>
+            {user ? (
+              <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
+            ) : (
+              <Link to="/signin" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign In</Link>
+            )}
             <Link to="/onboarding">
               <Button className="gradient-primary">Get Started</Button>
             </Link>
