@@ -113,6 +113,27 @@ export default function SignUp() {
         metadata: { source: "signup_flow" },
       });
 
+      // 7. Auto-progress to in_review after a short delay (simulated)
+      setTimeout(async () => {
+        try {
+          // Update case status to in_review
+          await supabase
+            .from("onboarding_cases")
+            .update({ status: "in_review" })
+            .eq("id", caseId);
+          
+          // Create in_review event
+          await supabase.from("onboarding_events").insert({
+            case_id: caseId,
+            event_type: "case_in_review",
+            actor: "system",
+            metadata: { note: "Application moved to review queue" },
+          });
+        } catch (err) {
+          console.error("Auto-progress error:", err);
+        }
+      }, 5000); // 5 seconds delay
+
       // 7. Update user profile with phone if available
       if (data.owner.phone) {
         await supabase.from("profiles").upsert({
