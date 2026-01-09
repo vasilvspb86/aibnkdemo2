@@ -25,8 +25,8 @@ export function useDashboardData() {
     },
   });
 
-  // Fetch recent transactions
-  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+  // Fetch recent account transactions
+  const { data: accountTransactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ["transactions", DEMO_ACCOUNT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,12 +34,60 @@ export function useDashboardData() {
         .select("*")
         .eq("account_id", DEMO_ACCOUNT_ID)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
       
       if (error) throw error;
       return data;
     },
   });
+
+  // Fetch recent card transactions
+  const { data: cardTransactions, isLoading: cardTransactionsLoading } = useQuery({
+    queryKey: ["card-transactions-dashboard", DEMO_ORG_ID],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("card_transactions")
+        .select(`
+          *,
+          cards!inner(organization_id, cardholder_name)
+        `)
+        .eq("cards.organization_id", DEMO_ORG_ID)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Combine and sort all transactions
+  const transactions = (() => {
+    const accountTxs = (accountTransactions || []).map(tx => ({
+      id: tx.id,
+      type: tx.type as "credit" | "debit",
+      amount: Number(tx.amount),
+      currency: tx.currency,
+      description: tx.description || tx.counterparty_name || "Transaction",
+      category: tx.category,
+      created_at: tx.created_at,
+      source: "account" as const,
+    }));
+
+    const cardTxs = (cardTransactions || []).map(tx => ({
+      id: tx.id,
+      type: "debit" as const,
+      amount: Number(tx.amount),
+      currency: tx.currency,
+      description: tx.merchant_name || "Card Transaction",
+      category: tx.merchant_category,
+      created_at: tx.created_at,
+      source: "card" as const,
+    }));
+
+    return [...accountTxs, ...cardTxs]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+  })();
 
   // Fetch 30-day transaction summary
   const { data: transactionSummary, isLoading: summaryLoading } = useQuery({
@@ -118,7 +166,7 @@ export function useDashboardData() {
     },
   });
 
-  const isLoading = accountLoading || transactionsLoading || summaryLoading || invoicesLoading || orgLoading;
+  const isLoading = accountLoading || transactionsLoading || cardTransactionsLoading || summaryLoading || invoicesLoading || orgLoading;
 
   return {
     account,
