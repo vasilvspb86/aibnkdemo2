@@ -178,6 +178,29 @@ export function useCardsData() {
     };
   };
 
+  // Get spending breakdown by category for a card
+  const getCategorySpending = (cardId: string) => {
+    const transactions = getCardTransactions(cardId);
+    const categoryMap: Record<string, { amount: number; count: number }> = {};
+    
+    transactions.forEach((tx) => {
+      const category = tx.merchant_category || "Other";
+      if (!categoryMap[category]) {
+        categoryMap[category] = { amount: 0, count: 0 };
+      }
+      categoryMap[category].amount += Number(tx.amount);
+      categoryMap[category].count += 1;
+    });
+    
+    return Object.entries(categoryMap)
+      .map(([category, data]) => ({
+        category,
+        amount: data.amount,
+        count: data.count,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
   return {
     cards,
     allCardTransactions,
@@ -187,6 +210,7 @@ export function useCardsData() {
     toggleCardFreeze,
     getCardTransactions,
     getCardStats,
+    getCategorySpending,
   };
 }
 
