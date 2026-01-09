@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { Building2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Building2, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { getLocalOnboardingData, clearLocalOnboardingData } from "@/hooks/use-local-onboarding";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,20 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
+
+  // Check for pending onboarding data
+  const onboardingData = getLocalOnboardingData();
+  const hasOnboardingData = onboardingData?.submitted === true;
+
+  // Pre-fill name from onboarding if available
+  useEffect(() => {
+    if (onboardingData?.owner?.full_name && !displayName) {
+      setDisplayName(onboardingData.owner.full_name);
+    }
+    if (onboardingData?.owner?.email && !email) {
+      setEmail(onboardingData.owner.email);
+    }
+  }, [onboardingData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +52,13 @@ export default function SignUp() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Account created successfully!");
+      // Clear onboarding data after successful signup
+      if (hasOnboardingData) {
+        clearLocalOnboardingData();
+        toast.success("Account created! Your onboarding information has been saved.");
+      } else {
+        toast.success("Account created successfully!");
+      }
       navigate("/dashboard");
     }
   };
