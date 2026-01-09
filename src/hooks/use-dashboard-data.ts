@@ -25,7 +25,7 @@ export function useDashboardData() {
     },
   });
 
-  // Fetch recent account transactions
+  // Fetch recent account transactions (only completed ones)
   const { data: accountTransactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ["transactions", DEMO_ACCOUNT_ID],
     queryFn: async () => {
@@ -33,6 +33,7 @@ export function useDashboardData() {
         .from("transactions")
         .select("*")
         .eq("account_id", DEMO_ACCOUNT_ID)
+        .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(10);
       
@@ -96,11 +97,12 @@ export function useDashboardData() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Fetch account transactions
+      // Fetch account transactions (only completed ones)
       const { data: accountTxs, error: accountError } = await supabase
         .from("transactions")
         .select("type, amount")
         .eq("account_id", DEMO_ACCOUNT_ID)
+        .eq("status", "completed")
         .gte("created_at", thirtyDaysAgo.toISOString());
       
       if (accountError) throw accountError;
