@@ -34,8 +34,19 @@ import {
   Clock,
   AlertCircle,
   Trash2,
-  Eye
+  Eye,
+  Pencil
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,9 +56,12 @@ import {
 import { useInvoicesData, formatInvoiceDate, type LineItem, type InvoiceStatus } from "@/hooks/use-invoices-data";
 
 export default function Invoices() {
-  const { invoices, stats, isLoading, createInvoice, updateInvoiceStatus } = useInvoicesData();
+  const { invoices, stats, isLoading, createInvoice, updateInvoice, updateInvoiceStatus, deleteInvoice } = useInvoicesData();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<NonNullable<typeof invoices>[number] | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   // Form state
@@ -127,6 +141,65 @@ export default function Invoices() {
 
     resetForm();
     setIsCreateOpen(false);
+  };
+
+  const handleEditInvoice = (invoice: NonNullable<typeof invoices>[number]) => {
+    setEditingInvoice(invoice);
+    setClientName(invoice.client_name);
+    setClientEmail(invoice.client_email || "");
+    setIssueDate(invoice.issue_date);
+    setDueDate(invoice.due_date || "");
+    setCurrency(invoice.currency);
+    setTaxRate(String(invoice.tax_rate || 0));
+    setNotes(invoice.notes || "");
+    
+    // Load line items
+    const items = invoice.invoice_line_items?.map((item: any) => ({
+      description: item.description,
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price),
+      amount: Number(item.amount),
+    })) || [{ description: "", quantity: 1, unit_price: 0, amount: 0 }];
+    setLineItems(items);
+    
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateInvoice = async (sendImmediately: boolean) => {
+    if (!editingInvoice || !clientName || lineItems.every((item) => !item.description)) {
+      return;
+    }
+
+    await updateInvoice.mutateAsync({
+      invoiceId: editingInvoice.id,
+      invoiceData: {
+        client_name: clientName,
+        client_email: clientEmail,
+        issue_date: issueDate,
+        due_date: dueDate,
+        tax_rate: parseFloat(taxRate),
+        currency,
+        notes: notes || undefined,
+      },
+      line_items: lineItems.filter((item) => item.description),
+    });
+
+    if (sendImmediately) {
+      await updateInvoiceStatus.mutateAsync({
+        invoiceId: editingInvoice.id,
+        status: "sent",
+      });
+    }
+
+    resetForm();
+    setEditingInvoice(null);
+    setIsEditOpen(false);
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!deleteConfirmId) return;
+    await deleteInvoice.mutateAsync(deleteConfirmId);
+    setDeleteConfirmId(null);
   };
 
   const handleStatusChange = (invoice: NonNullable<typeof invoices>[number], newStatus: InvoiceStatus) => {
@@ -471,10 +544,23 @@ export default function Invoices() {
                             </DropdownMenuItem>
                           )}
                           {invoice.status === "draft" && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(invoice, "sent")}>
-                              <Send className="h-4 w-4 mr-2" />
-                              Send Invoice
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem onClick={() => handleEditInvoice(invoice)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit Invoice
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(invoice, "sent")}>
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Invoice
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteConfirmId(invoice.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Invoice
+                              </DropdownMenuItem>
+                            </>
                           )}
                           <DropdownMenuItem>
                             <Download className="h-4 w-4 mr-2" />
@@ -496,6 +582,198 @@ export default function Invoices() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        setIsEditOpen(open);
+        if (!open) {
+          resetForm();
+          setEditingInvoice(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Invoice</DialogTitle>
+            <DialogDescription>
+              Update the invoice details. Invoice number: {editingInvoice?.invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Client Name *</Label>
+                <Input 
+                  placeholder="Client or company name" 
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Client Email</Label>
+                <Input 
+                  type="email" 
+                  placeholder="billing@client.com" 
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Invoice Date</Label>
+                <Input 
+                  type="date" 
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Input 
+                  type="date" 
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Line Items</Label>
+                <Button variant="ghost" size="sm" onClick={addLineItem} className="gap-1">
+                  <Plus className="h-4 w-4" />
+                  Add Item
+                </Button>
+              </div>
+              
+              {lineItems.map((item, index) => (
+                <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                  <Input 
+                    className="col-span-6" 
+                    placeholder="Description" 
+                    value={item.description}
+                    onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                  />
+                  <Input 
+                    className="col-span-2" 
+                    type="number" 
+                    placeholder="Qty"
+                    value={item.quantity || ""}
+                    onChange={(e) => updateLineItem(index, "quantity", e.target.value)}
+                  />
+                  <Input 
+                    className="col-span-3" 
+                    type="number" 
+                    placeholder="Rate"
+                    value={item.unit_price || ""}
+                    onChange={(e) => updateLineItem(index, "unit_price", e.target.value)}
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="col-span-1"
+                    onClick={() => removeLineItem(index)}
+                    disabled={lineItems.length === 1}
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              ))}
+
+              <div className="border-t pt-3 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{currency} {subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VAT ({taxRate}%)</span>
+                  <span>{currency} {taxAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-base">
+                  <span>Total</span>
+                  <span>{currency} {total.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>VAT (%)</Label>
+                <Select value={taxRate} onValueChange={setTaxRate}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0% - No VAT</SelectItem>
+                    <SelectItem value="5">5% - Standard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AED">AED</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea 
+                placeholder="Payment terms, bank details, or other notes..." 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleUpdateInvoice(false)}
+              disabled={updateInvoice.isPending || !clientName}
+            >
+              Save Changes
+            </Button>
+            <Button 
+              className="gradient-primary gap-2" 
+              onClick={() => handleUpdateInvoice(true)}
+              disabled={updateInvoice.isPending || !clientName}
+            >
+              <Send className="h-4 w-4" />
+              {updateInvoice.isPending ? "Saving..." : "Save & Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this draft invoice? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteInvoice}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

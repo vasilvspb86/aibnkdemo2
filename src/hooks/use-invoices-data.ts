@@ -208,12 +208,119 @@ export function useInvoicesData() {
     },
   });
 
+  // Update invoice mutation (for editing drafts)
+  const updateInvoice = useMutation({
+    mutationFn: async ({
+      invoiceId,
+      invoiceData,
+      line_items,
+    }: {
+      invoiceId: string;
+      invoiceData: {
+        client_name: string;
+        client_email: string;
+        issue_date: string;
+        due_date: string;
+        tax_rate: number;
+        currency: string;
+        notes?: string;
+      };
+      line_items: LineItem[];
+    }) => {
+      const subtotal = line_items.reduce((sum, item) => sum + item.amount, 0);
+      const taxAmount = subtotal * (invoiceData.tax_rate / 100);
+      const total = subtotal + taxAmount;
+
+      const { data, error } = await supabase
+        .from("invoices")
+        .update({
+          client_name: invoiceData.client_name,
+          client_email: invoiceData.client_email,
+          issue_date: invoiceData.issue_date,
+          due_date: invoiceData.due_date,
+          subtotal,
+          tax_rate: invoiceData.tax_rate,
+          tax_amount: taxAmount,
+          total,
+          currency: invoiceData.currency,
+          notes: invoiceData.notes,
+        })
+        .eq("id", invoiceId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Delete existing line items and re-insert
+      const { error: deleteError } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("invoice_id", invoiceId);
+
+      if (deleteError) throw deleteError;
+
+      if (line_items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from("invoice_line_items")
+          .insert(
+            line_items.map((item) => ({
+              invoice_id: invoiceId,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              amount: item.amount,
+            }))
+          );
+
+        if (itemsError) throw itemsError;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Invoice updated");
+    },
+    onError: (error) => {
+      toast.error(`Failed to update invoice: ${error.message}`);
+    },
+  });
+
+  // Delete invoice mutation
+  const deleteInvoice = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      // Delete line items first (foreign key constraint)
+      const { error: itemsError } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("invoice_id", invoiceId);
+
+      if (itemsError) throw itemsError;
+
+      const { error } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", invoiceId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Invoice deleted");
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete invoice: ${error.message}`);
+    },
+  });
+
   return {
     invoices,
     stats,
     isLoading: invoicesLoading,
     createInvoice,
+    updateInvoice,
     updateInvoiceStatus,
+    deleteInvoice,
     getNextInvoiceNumber,
   };
 }
