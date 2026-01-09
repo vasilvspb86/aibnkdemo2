@@ -514,7 +514,7 @@ export default function Invoices() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <p className="font-semibold">
+                    <p className="font-semibold min-w-[120px] text-right tabular-nums">
                       {invoice.currency} {Number(invoice.total).toLocaleString()}
                     </p>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
