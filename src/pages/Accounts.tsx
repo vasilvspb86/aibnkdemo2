@@ -13,8 +13,7 @@ import {
   MoreHorizontal,
   Eye,
   EyeOff,
-  CreditCard,
-  Receipt
+  CreditCard
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -63,8 +62,6 @@ export default function Accounts() {
         }`}>
           {tx.source === "card" ? (
             <CreditCard className="h-5 w-5 text-muted-foreground" />
-          ) : tx.source === "expense" ? (
-            <Receipt className="h-5 w-5 text-muted-foreground" />
           ) : tx.type === "credit" ? (
             <ArrowDownLeft className="h-5 w-5 text-accent" />
           ) : (
