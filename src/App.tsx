@@ -23,6 +23,7 @@ import Credit from "./pages/Credit";
 import Rewards from "./pages/Rewards";
 import Assistant from "./pages/Assistant";
 import Settings from "./pages/Settings";
+import { AppLayout } from "./components/layout/AppLayout";
 import OnboardingWelcome from "./pages/onboarding/OnboardingWelcome";
 import OnboardingHubLocal from "./pages/onboarding/OnboardingHubLocal";
 import CompanyTabLocal from "./pages/onboarding/CompanyTabLocal";
@@ -64,17 +65,19 @@ const App = () => (
                 <Route path="review" element={<ReviewTabLocal />} />
               </Route>
 
-              {/* Protected routes */}
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
-              <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
-              <Route path="/cards" element={<ProtectedRoute><Cards /></ProtectedRoute>} />
-              <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/credit" element={<ProtectedRoute><Credit /></ProtectedRoute>} />
-              <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
-              <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Protected routes with AppLayout */}
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/accounts" element={<Accounts />} />
+                <Route path="/payments" element={<Payments />} />
+                <Route path="/cards" element={<Cards />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/expenses" element={<Expenses />} />
+                <Route path="/credit" element={<Credit />} />
+                <Route path="/rewards" element={<Rewards />} />
+                <Route path="/assistant" element={<Assistant />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
 
               {/* Catch all */}
               <Route path="*" element={<NotFound />} />
