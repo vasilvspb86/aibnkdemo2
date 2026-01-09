@@ -187,7 +187,7 @@ export default function Assistant() {
                   }`}
                 >
                   {message.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-3 [&>p:last-child]:mb-0 [&>ul]:mb-3 [&>ol]:mb-3 [&>*:first-child]:mt-0">
                       <ReactMarkdown>{message.content}</ReactMarkdown>
                     </div>
                   ) : (
