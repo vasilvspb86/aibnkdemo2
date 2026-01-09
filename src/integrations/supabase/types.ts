@@ -342,6 +342,124 @@ export type Database = {
           },
         ]
       }
+      company_profiles: {
+        Row: {
+          business_activity: string | null
+          case_id: string
+          company_legal_name: string | null
+          confirmed_by_user: boolean
+          created_at: string
+          issuing_authority: string | null
+          legal_form: string | null
+          operating_address: string | null
+          prefill_source: Database["public"]["Enums"]["prefill_source"] | null
+          registered_address: string | null
+          trade_license_number: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          business_activity?: string | null
+          case_id: string
+          company_legal_name?: string | null
+          confirmed_by_user?: boolean
+          created_at?: string
+          issuing_authority?: string | null
+          legal_form?: string | null
+          operating_address?: string | null
+          prefill_source?: Database["public"]["Enums"]["prefill_source"] | null
+          registered_address?: string | null
+          trade_license_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          business_activity?: string | null
+          case_id?: string
+          company_legal_name?: string | null
+          confirmed_by_user?: boolean
+          created_at?: string
+          issuing_authority?: string | null
+          legal_form?: string | null
+          operating_address?: string | null
+          prefill_source?: Database["public"]["Enums"]["prefill_source"] | null
+          registered_address?: string | null
+          trade_license_number?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_profiles_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "onboarding_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_answers: {
+        Row: {
+          account_use_purpose:
+            | Database["public"]["Enums"]["account_use_purpose"]
+            | null
+          case_id: string
+          cash_activity: boolean | null
+          created_at: string
+          customer_location:
+            | Database["public"]["Enums"]["customer_location"]
+            | null
+          expected_monthly_volume_band:
+            | Database["public"]["Enums"]["volume_band"]
+            | null
+          other_controllers: boolean | null
+          pep_confirmation: Database["public"]["Enums"]["pep_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          account_use_purpose?:
+            | Database["public"]["Enums"]["account_use_purpose"]
+            | null
+          case_id: string
+          cash_activity?: boolean | null
+          created_at?: string
+          customer_location?:
+            | Database["public"]["Enums"]["customer_location"]
+            | null
+          expected_monthly_volume_band?:
+            | Database["public"]["Enums"]["volume_band"]
+            | null
+          other_controllers?: boolean | null
+          pep_confirmation?: Database["public"]["Enums"]["pep_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          account_use_purpose?:
+            | Database["public"]["Enums"]["account_use_purpose"]
+            | null
+          case_id?: string
+          cash_activity?: boolean | null
+          created_at?: string
+          customer_location?:
+            | Database["public"]["Enums"]["customer_location"]
+            | null
+          expected_monthly_volume_band?:
+            | Database["public"]["Enums"]["volume_band"]
+            | null
+          other_controllers?: boolean | null
+          pep_confirmation?: Database["public"]["Enums"]["pep_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_answers_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "onboarding_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_prequalifications: {
         Row: {
           assessed_at: string
@@ -763,6 +881,205 @@ export type Database = {
           },
         ]
       }
+      onboarding_cases: {
+        Row: {
+          created_at: string
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          id: string
+          progress_percent: number
+          risk_level: Database["public"]["Enums"]["risk_level"]
+          sla_text: string | null
+          status: Database["public"]["Enums"]["onboarding_status"]
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          progress_percent?: number
+          risk_level?: Database["public"]["Enums"]["risk_level"]
+          sla_text?: string | null
+          status?: Database["public"]["Enums"]["onboarding_status"]
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          id?: string
+          progress_percent?: number
+          risk_level?: Database["public"]["Enums"]["risk_level"]
+          sla_text?: string | null
+          status?: Database["public"]["Enums"]["onboarding_status"]
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      onboarding_documents: {
+        Row: {
+          case_id: string
+          created_at: string
+          document_type: Database["public"]["Enums"]["onboarding_doc_type"]
+          expiry_date: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          owner_person_id: string | null
+          rejection_reason_code:
+            | Database["public"]["Enums"]["rejection_reason"]
+            | null
+          status: Database["public"]["Enums"]["onboarding_doc_status"]
+          updated_at: string
+          uploaded_at: string | null
+          validation_notes: string | null
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          document_type: Database["public"]["Enums"]["onboarding_doc_type"]
+          expiry_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          owner_person_id?: string | null
+          rejection_reason_code?:
+            | Database["public"]["Enums"]["rejection_reason"]
+            | null
+          status?: Database["public"]["Enums"]["onboarding_doc_status"]
+          updated_at?: string
+          uploaded_at?: string | null
+          validation_notes?: string | null
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          document_type?: Database["public"]["Enums"]["onboarding_doc_type"]
+          expiry_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          owner_person_id?: string | null
+          rejection_reason_code?:
+            | Database["public"]["Enums"]["rejection_reason"]
+            | null
+          status?: Database["public"]["Enums"]["onboarding_doc_status"]
+          updated_at?: string
+          uploaded_at?: string | null
+          validation_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_documents_owner_person_id_fkey"
+            columns: ["owner_person_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_events: {
+        Row: {
+          actor: Database["public"]["Enums"]["event_actor"]
+          case_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          actor?: Database["public"]["Enums"]["event_actor"]
+          case_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          actor?: Database["public"]["Enums"]["event_actor"]
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_persons: {
+        Row: {
+          case_id: string
+          created_at: string
+          dob: string | null
+          email: string | null
+          emirates_id_number: string | null
+          full_name: string | null
+          id: string
+          is_uae_resident: boolean
+          nationality: string | null
+          ownership_percent: number | null
+          phone: string | null
+          roles: Database["public"]["Enums"]["person_role"][]
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          dob?: string | null
+          email?: string | null
+          emirates_id_number?: string | null
+          full_name?: string | null
+          id?: string
+          is_uae_resident?: boolean
+          nationality?: string | null
+          ownership_percent?: number | null
+          phone?: string | null
+          roles?: Database["public"]["Enums"]["person_role"][]
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          dob?: string | null
+          email?: string | null
+          emirates_id_number?: string | null
+          full_name?: string | null
+          id?: string
+          is_uae_resident?: boolean
+          nationality?: string | null
+          ownership_percent?: number | null
+          phone?: string | null
+          roles?: Database["public"]["Enums"]["person_role"][]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_persons_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           id: string
@@ -1099,6 +1416,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      account_use_purpose: "invoice_clients" | "pay_suppliers" | "both"
       card_status: "requested" | "active" | "frozen" | "cancelled" | "expired"
       card_type: "physical" | "virtual"
       credit_status:
@@ -1110,6 +1428,7 @@ export type Database = {
         | "rejected"
         | "active"
         | "closed"
+      customer_location: "uae" | "gcc" | "international"
       document_type:
         | "trade_license"
         | "moa"
@@ -1118,6 +1437,8 @@ export type Database = {
         | "proof_of_address"
         | "bank_statement"
         | "other"
+      entity_type: "dubai_single_owner_uae_resident"
+      event_actor: "user" | "system"
       expense_status: "pending" | "approved" | "rejected" | "reimbursed"
       invoice_status:
         | "draft"
@@ -1141,6 +1462,26 @@ export type Database = {
         | "branch"
         | "free_zone"
         | "other"
+      onboarding_doc_status:
+        | "missing"
+        | "uploaded"
+        | "validating"
+        | "accepted"
+        | "rejected"
+      onboarding_doc_type:
+        | "trade_license"
+        | "moa_aoa"
+        | "emirates_id_front"
+        | "emirates_id_back"
+        | "passport"
+        | "proof_of_address"
+      onboarding_status:
+        | "draft"
+        | "submitted"
+        | "in_review"
+        | "needs_info"
+        | "approved"
+        | "not_approved"
       payment_status:
         | "draft"
         | "pending_approval"
@@ -1149,6 +1490,16 @@ export type Database = {
         | "completed"
         | "failed"
         | "cancelled"
+      pep_status: "no" | "yes" | "unsure"
+      person_role: "owner" | "director" | "authorized_signatory"
+      prefill_source: "registry_lookup" | "manual_entry"
+      rejection_reason:
+        | "expired"
+        | "unreadable"
+        | "mismatch_name"
+        | "missing_pages"
+        | "other"
+      risk_level: "low" | "medium" | "high"
       transaction_status:
         | "pending"
         | "processing"
@@ -1156,6 +1507,7 @@ export type Database = {
         | "failed"
         | "cancelled"
       transaction_type: "credit" | "debit"
+      volume_band: "0_50k" | "50_200k" | "200k_plus"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1283,6 +1635,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_use_purpose: ["invoice_clients", "pay_suppliers", "both"],
       card_status: ["requested", "active", "frozen", "cancelled", "expired"],
       card_type: ["physical", "virtual"],
       credit_status: [
@@ -1295,6 +1648,7 @@ export const Constants = {
         "active",
         "closed",
       ],
+      customer_location: ["uae", "gcc", "international"],
       document_type: [
         "trade_license",
         "moa",
@@ -1304,6 +1658,8 @@ export const Constants = {
         "bank_statement",
         "other",
       ],
+      entity_type: ["dubai_single_owner_uae_resident"],
+      event_actor: ["user", "system"],
       expense_status: ["pending", "approved", "rejected", "reimbursed"],
       invoice_status: [
         "draft",
@@ -1330,6 +1686,29 @@ export const Constants = {
         "free_zone",
         "other",
       ],
+      onboarding_doc_status: [
+        "missing",
+        "uploaded",
+        "validating",
+        "accepted",
+        "rejected",
+      ],
+      onboarding_doc_type: [
+        "trade_license",
+        "moa_aoa",
+        "emirates_id_front",
+        "emirates_id_back",
+        "passport",
+        "proof_of_address",
+      ],
+      onboarding_status: [
+        "draft",
+        "submitted",
+        "in_review",
+        "needs_info",
+        "approved",
+        "not_approved",
+      ],
       payment_status: [
         "draft",
         "pending_approval",
@@ -1339,6 +1718,17 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
+      pep_status: ["no", "yes", "unsure"],
+      person_role: ["owner", "director", "authorized_signatory"],
+      prefill_source: ["registry_lookup", "manual_entry"],
+      rejection_reason: [
+        "expired",
+        "unreadable",
+        "mismatch_name",
+        "missing_pages",
+        "other",
+      ],
+      risk_level: ["low", "medium", "high"],
       transaction_status: [
         "pending",
         "processing",
@@ -1347,6 +1737,7 @@ export const Constants = {
         "cancelled",
       ],
       transaction_type: ["credit", "debit"],
+      volume_band: ["0_50k", "50_200k", "200k_plus"],
     },
   },
 } as const

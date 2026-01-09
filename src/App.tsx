@@ -13,8 +13,6 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Onboarding from "./pages/Onboarding";
-import OnboardingStatus from "./pages/OnboardingStatus";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Payments from "./pages/Payments";
@@ -26,6 +24,17 @@ import Rewards from "./pages/Rewards";
 import Assistant from "./pages/Assistant";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+
+// New Onboarding Pages
+import OnboardingWelcome from "./pages/onboarding/OnboardingWelcome";
+import OnboardingVerify from "./pages/onboarding/OnboardingVerify";
+import OnboardingHub from "./pages/onboarding/OnboardingHub";
+import CompanyTab from "./pages/onboarding/CompanyTab";
+import OwnershipTab from "./pages/onboarding/OwnershipTab";
+import ComplianceTab from "./pages/onboarding/ComplianceTab";
+import DocumentsTab from "./pages/onboarding/DocumentsTab";
+import ReviewTab from "./pages/onboarding/ReviewTab";
+import OnboardingStatusHub from "./pages/onboarding/OnboardingStatusHub";
 
 // Layout
 import { AppLayout } from "./components/layout/AppLayout";
@@ -47,8 +56,18 @@ const App = () => (
               <Route path="/signup" element={<SignUp />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/onboarding/status" element={<OnboardingStatus />} />
+
+              {/* New Onboarding Flow */}
+              <Route path="/start" element={<OnboardingWelcome />} />
+              <Route path="/verify" element={<OnboardingVerify />} />
+              <Route path="/onboarding/:caseId" element={<OnboardingHub />}>
+                <Route path="company" element={<CompanyTab />} />
+                <Route path="ownership" element={<OwnershipTab />} />
+                <Route path="compliance" element={<ComplianceTab />} />
+                <Route path="documents" element={<DocumentsTab />} />
+                <Route path="review" element={<ReviewTab />} />
+              </Route>
+              <Route path="/onboarding/:caseId/status" element={<OnboardingStatusHub />} />
 
               {/* Protected App Routes with Sidebar */}
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
