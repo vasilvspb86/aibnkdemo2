@@ -11,8 +11,9 @@ import { useTheme } from "@/hooks/use-theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import DocumentsVerification from "@/components/settings/DocumentsVerification";
+import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
 import { toast } from "sonner";
 import { 
   User, 
@@ -55,6 +56,11 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const { organization, kybApplication, companyProfile, isLoading } = useDashboardData();
   const { user } = useAuth();
+  const { data: localOnboardingData, progress: localProgress } = useLocalOnboarding();
+  const [searchParams] = useSearchParams();
+  
+  // Determine default tab from URL params
+  const defaultTab = searchParams.get("tab") || "profile";
   
   const [profileLoading, setProfileLoading] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -113,6 +119,19 @@ export default function Settings() {
   const kybStatus = kybApplication?.status || null;
   const statusConfig = kybStatus ? kybStatusConfig[kybStatus] : null;
   
+  // Check if user has local onboarding data in progress
+  const hasLocalOnboarding = localOnboardingData.company.confirmed_by_user || 
+                             localOnboardingData.owner.full_name || 
+                             Object.keys(localOnboardingData.documents).length > 0;
+  
+  // Determine the next step in local onboarding
+  const getOnboardingNextStep = () => {
+    if (!localOnboardingData.company.confirmed_by_user) return "/onboarding-local/company";
+    if (!localOnboardingData.owner.full_name) return "/onboarding-local/ownership";
+    if (!localOnboardingData.compliance.account_use_purpose) return "/onboarding-local/compliance";
+    return "/onboarding-local/documents";
+  };
+  
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -120,7 +139,7 @@ export default function Settings() {
         <p className="text-muted-foreground mt-1">Manage your account and preferences.</p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full max-w-lg grid-cols-4">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
@@ -279,20 +298,44 @@ export default function Settings() {
                   <Skeleton className="h-4 w-48" />
                 </div>
               ) : !kybStatus ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="font-medium">Complete your business verification</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Start the onboarding process to unlock all features
-                    </p>
+                // Check for local onboarding in progress
+                hasLocalOnboarding ? (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Continue your application</p>
+                        <Badge variant="secondary">{localProgress}% complete</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {localOnboardingData.documentsSkipped 
+                          ? "Upload required documents to complete verification"
+                          : "Pick up where you left off to complete verification"
+                        }
+                      </p>
+                    </div>
+                    <Button asChild className="gradient-primary gap-2">
+                      <Link to={localOnboardingData.documentsSkipped ? "/onboarding-local/documents" : getOnboardingNextStep()}>
+                        Continue Application
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
-                  <Button asChild className="gradient-primary gap-2">
-                    <Link to="/onboarding">
-                      Start Onboarding
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
+                    <div>
+                      <p className="font-medium">Complete your business verification</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Start the onboarding process to unlock all features
+                      </p>
+                    </div>
+                    <Button asChild className="gradient-primary gap-2">
+                      <Link to="/onboarding-local/welcome">
+                        Start Onboarding
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                )
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
