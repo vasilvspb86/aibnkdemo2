@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Building2, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
-import { getLocalOnboardingData, clearLocalOnboardingData } from "@/hooks/use-local-onboarding";
+import { getLocalOnboardingData, clearLocalOnboardingData, LocalOnboardingData } from "@/hooks/use-local-onboarding";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -32,6 +34,101 @@ export default function SignUp() {
     }
   }, [onboardingData]);
 
+  // Save onboarding data to database
+  const saveOnboardingToDatabase = async (userId: string, data: LocalOnboardingData) => {
+    try {
+      // 1. Create onboarding case
+      const { data: caseData, error: caseError } = await supabase
+        .from("onboarding_cases")
+        .insert({
+          user_id: userId,
+          status: "submitted",
+          submitted_at: new Date().toISOString(),
+          progress_percent: 100,
+        })
+        .select()
+        .single();
+
+      if (caseError) throw caseError;
+
+      const caseId = caseData.id;
+
+      // 2. Create company profile
+      await supabase.from("company_profiles").insert({
+        case_id: caseId,
+        issuing_authority: data.company.issuing_authority,
+        trade_license_number: data.company.trade_license_number,
+        company_legal_name: data.company.company_legal_name,
+        legal_form: data.company.legal_form,
+        registered_address: data.company.registered_address,
+        business_activity: data.company.business_activity,
+        operating_address: data.company.operating_address || null,
+        website: data.company.website || null,
+        prefill_source: data.company.prefill_source,
+        confirmed_by_user: data.company.confirmed_by_user,
+      });
+
+      // 3. Create onboarding person (owner)
+      await supabase.from("onboarding_persons").insert({
+        case_id: caseId,
+        full_name: data.owner.full_name,
+        dob: data.owner.dob || null,
+        nationality: data.owner.nationality,
+        email: data.owner.email || null,
+        phone: data.owner.phone || null,
+        emirates_id_number: data.owner.emirates_id_number || null,
+        roles: data.owner.roles as any,
+        ownership_percent: data.owner.ownership_percent,
+        is_uae_resident: data.owner.is_uae_resident,
+      });
+
+      // 4. Create compliance answers
+      await supabase.from("compliance_answers").insert({
+        case_id: caseId,
+        account_use_purpose: data.compliance.account_use_purpose as any,
+        expected_monthly_volume_band: data.compliance.expected_monthly_volume_band as any,
+        customer_location: data.compliance.customer_location as any,
+        cash_activity: data.compliance.cash_activity,
+        pep_confirmation: data.compliance.pep_confirmation as any,
+        other_controllers: data.compliance.other_controllers,
+      });
+
+      // 5. Create document records (without actual file upload for now)
+      const docPromises = Object.entries(data.documents).map(([docType, docData]) =>
+        supabase.from("onboarding_documents").insert({
+          case_id: caseId,
+          document_type: docType as any,
+          file_name: docData.file_name,
+          status: "accepted" as any,
+          uploaded_at: docData.uploaded_at,
+        })
+      );
+      await Promise.all(docPromises);
+
+      // 6. Create audit event
+      await supabase.from("onboarding_events").insert({
+        case_id: caseId,
+        event_type: "case_submitted",
+        actor: "user",
+        metadata: { source: "signup_flow" },
+      });
+
+      // 7. Update user profile with phone if available
+      if (data.owner.phone) {
+        await supabase.from("profiles").upsert({
+          user_id: userId,
+          display_name: data.owner.full_name,
+          phone: data.owner.phone,
+        });
+      }
+
+      return caseId;
+    } catch (error) {
+      console.error("Error saving onboarding data:", error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -46,20 +143,40 @@ export default function SignUp() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, displayName);
-    setLoading(false);
+    
+    try {
+      const { error } = await signUp(email, password, displayName);
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      // Clear onboarding data after successful signup
-      if (hasOnboardingData) {
-        clearLocalOnboardingData();
-        toast.success("Account created! Your onboarding information has been saved.");
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Wait a moment for the auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user && hasOnboardingData && onboardingData) {
+        try {
+          await saveOnboardingToDatabase(user.id, onboardingData);
+          clearLocalOnboardingData();
+          toast.success("Account created! Your business application has been submitted.");
+        } catch (saveError) {
+          console.error("Failed to save onboarding:", saveError);
+          toast.success("Account created! Some onboarding data may need to be re-entered.");
+        }
       } else {
         toast.success("Account created successfully!");
       }
+
       navigate("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,8 +200,38 @@ export default function SignUp() {
               <span className="text-2xl font-display font-bold">AIBNK</span>
             </div>
             <CardTitle className="text-2xl">Create an account</CardTitle>
-            <CardDescription>Enter your details to get started</CardDescription>
+            <CardDescription>
+              {hasOnboardingData 
+                ? "Complete your registration to submit your application" 
+                : "Enter your details to get started"}
+            </CardDescription>
           </CardHeader>
+
+          {/* Show onboarding summary if available */}
+          {hasOnboardingData && onboardingData && (
+            <div className="px-6 pb-4">
+              <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-green-800 dark:text-green-200">
+                    Application Ready
+                  </span>
+                </div>
+                <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
+                  <p><span className="font-medium">Company:</span> {onboardingData.company.company_legal_name}</p>
+                  <p><span className="font-medium">Owner:</span> {onboardingData.owner.full_name}</p>
+                  <div className="flex gap-2 mt-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {Object.keys(onboardingData.documents).length} documents
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Ready to submit
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
@@ -142,7 +289,11 @@ export default function SignUp() {
                 className="w-full gradient-primary"
                 disabled={loading}
               >
-                {loading ? "Creating account..." : "Create account"}
+                {loading 
+                  ? "Creating account..." 
+                  : hasOnboardingData 
+                    ? "Create Account & Submit Application" 
+                    : "Create account"}
               </Button>
               
               <p className="text-sm text-muted-foreground text-center">
