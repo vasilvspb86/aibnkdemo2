@@ -82,15 +82,10 @@ export default function Landing() {
               Open your business account in under a minute. Manage payments, cards, invoices, and credit — 
               all powered by AI.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+            <div className="flex justify-center mt-10">
               <Link to="/onboarding">
-                <Button size="lg" className="gradient-primary gap-2 w-full sm:w-auto">
+                <Button size="lg" className="gradient-primary gap-2">
                   Open Free Account <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/dashboard">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  View Demo
                 </Button>
               </Link>
             </div>
