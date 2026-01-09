@@ -13,7 +13,8 @@ import {
   ArrowUpRight,
   RefreshCw,
   Check,
-  Loader2
+  Loader2,
+  ExternalLink
 } from "lucide-react";
 import { useAIChat, ChatAction } from "@/hooks/use-ai-chat";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +37,7 @@ const actionIcons: Record<string, typeof FileText> = {
   create_payment: ArrowUpRight,
   approve_expense: Check,
   view_account: CreditCard,
+  navigate: ExternalLink,
 };
 
 export default function Assistant() {
@@ -106,6 +108,12 @@ export default function Assistant() {
   };
 
   const handleActionClick = async (messageId: string, actionIndex: number, action: ChatAction) => {
+    // Handle navigation action directly without calling executeAction
+    if (action.type === "navigate" && action.data?.path) {
+      navigate(action.data.path);
+      return;
+    }
+    
     const key = `${messageId}-${actionIndex}`;
     setExecutingActions(prev => ({ ...prev, [key]: true }));
     
