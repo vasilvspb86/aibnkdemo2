@@ -30,8 +30,8 @@ export function useAccountData() {
     },
   });
 
-  // Fetch all transactions
-  const { data: allTransactions, isLoading: transactionsLoading } = useQuery({
+  // Fetch all account transactions
+  const { data: accountTransactions, isLoading: transactionsLoading } = useQuery({
     queryKey: ["account-transactions", DEMO_ACCOUNT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,6 +44,58 @@ export function useAccountData() {
       return data;
     },
   });
+
+  // Fetch card transactions
+  const { data: cardTransactions, isLoading: cardTransactionsLoading } = useQuery({
+    queryKey: ["card-transactions-account", DEMO_ORG_ID],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("card_transactions")
+        .select(`
+          *,
+          cards!inner(organization_id, cardholder_name, card_number_last4)
+        `)
+        .eq("cards.organization_id", DEMO_ORG_ID)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Combine and normalize all transactions
+  const allTransactions = useMemo(() => {
+    const accountTxs = (accountTransactions || []).map(tx => ({
+      id: tx.id,
+      type: tx.type as "credit" | "debit",
+      amount: Number(tx.amount),
+      currency: tx.currency,
+      description: tx.description || tx.counterparty_name || "Transaction",
+      counterparty_name: tx.counterparty_name,
+      reference: tx.reference,
+      category: tx.category,
+      created_at: tx.created_at,
+      status: tx.status,
+      source: "account" as const,
+    }));
+
+    const cardTxs = (cardTransactions || []).map(tx => ({
+      id: tx.id,
+      type: "debit" as const,
+      amount: Number(tx.amount),
+      currency: tx.currency,
+      description: tx.merchant_name || "Card Transaction",
+      counterparty_name: tx.merchant_name,
+      reference: `Card •••• ${tx.cards?.card_number_last4 || "****"}`,
+      category: tx.merchant_category,
+      created_at: tx.created_at,
+      status: tx.status,
+      source: "card" as const,
+    }));
+
+    return [...accountTxs, ...cardTxs]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [accountTransactions, cardTransactions]);
 
   // Filter transactions based on search and type
   const transactions = useMemo(() => {
@@ -90,7 +142,7 @@ export function useAccountData() {
     transactions,
     allTransactions,
     stats,
-    isLoading: accountLoading || transactionsLoading,
+    isLoading: accountLoading || transactionsLoading || cardTransactionsLoading,
     searchQuery,
     setSearchQuery,
     typeFilter,
