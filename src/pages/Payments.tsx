@@ -214,6 +214,17 @@ export default function Payments() {
     setPaymentPurpose("");
   };
 
+  // Format purpose for display
+  const formatPurpose = (purpose: string | null) => {
+    const purposeLabels: Record<string, string> = {
+      supplier: "Supplier Payment",
+      salary: "Salary/Wages",
+      services: "Professional Services",
+      other: "Other",
+    };
+    return purpose ? (purposeLabels[purpose] || purpose) : "Other";
+  };
+
   // Filter payments by status for the pending approvals section
   const pendingApprovalPayments = payments?.filter(p => p.status === "pending_approval") || [];
   const draftPayments = payments?.filter(p => p.status === "draft") || [];
@@ -687,7 +698,7 @@ export default function Payments() {
                             {(payment as any).beneficiary?.name || "Unknown Beneficiary"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {payment.reference || "Other"} • {formatPaymentDate(payment.created_at)}
+                            {formatPurpose(payment.purpose)} • {formatPaymentDate(payment.created_at)}
                           </p>
                         </div>
                       </div>
