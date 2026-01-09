@@ -17,6 +17,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 type DocType = "trade_license" | "moa_aoa" | "emirates_id_front" | "emirates_id_back" | "passport" | "proof_of_address";
@@ -82,6 +83,7 @@ const statusConfig: Record<string, { label: string; icon: typeof CheckCircle2; c
 
 export default function DocumentsTabLocal() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data, addDocument, skipDocuments, isLoading } = useLocalOnboarding();
   const [uploadingType, setUploadingType] = useState<DocType | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -284,7 +286,8 @@ export default function DocumentsTabLocal() {
             variant="ghost"
             onClick={() => {
               skipDocuments();
-              navigate("/signup");
+              // Redirect to settings if logged in, otherwise to signup
+              navigate(user ? "/settings" : "/signup");
             }}
           >
             <SkipForward className="w-4 h-4 mr-2" />
