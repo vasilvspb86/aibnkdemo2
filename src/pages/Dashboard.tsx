@@ -68,9 +68,23 @@ export default function Dashboard() {
 
   const userName = getUserName();
 
+  // Determine effective KYB status - prioritize local submitted state
+  const getEffectiveKybStatus = () => {
+    // If local onboarding is submitted, show submitted status
+    if (localOnboardingData.submitted) {
+      return "submitted";
+    }
+    // If there's a KYB application in the database, use its status
+    if (kybApplication?.status) {
+      return kybApplication.status;
+    }
+    // Default to draft
+    return "draft";
+  };
+
   // KYB status configuration
   const getKybStatusConfig = () => {
-    const status = kybApplication?.status || "draft";
+    const status = getEffectiveKybStatus();
     
     const configs: Record<string, { 
       title: string; 
