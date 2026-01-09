@@ -147,7 +147,14 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="font-medium">{kybConfig.title}</p>
-              <p className="text-sm text-muted-foreground">{kybConfig.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {kybConfig.description}
+                {kybApplication?.status === "draft" && (
+                  <Link to="/onboarding" className="ml-1 text-primary hover:underline font-medium">
+                    Complete →
+                  </Link>
+                )}
+              </p>
             </div>
           </div>
           <Badge variant="outline" className={`${kybConfig.colors.badgeBorder} ${kybConfig.colors.badgeText}`}>
