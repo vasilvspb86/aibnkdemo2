@@ -17,6 +17,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 const purposeLabels: Record<string, string> = {
@@ -46,7 +47,11 @@ const pepLabels: Record<string, string> = {
 export default function ReviewTabLocal() {
   const navigate = useNavigate();
   const { data, markSubmitted, isLoading } = useLocalOnboarding();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Check if user is already logged in
+  const isLoggedIn = !!user;
 
   // Validation checks
   const companyComplete = data.company.confirmed_by_user === true;
@@ -75,10 +80,15 @@ export default function ReviewTabLocal() {
     // Mark as submitted in localStorage
     markSubmitted();
     
-    toast.success("Application submitted! Create your account to continue.");
-    
-    // Navigate to signup
-    navigate("/signup");
+    if (isLoggedIn) {
+      // User is already registered - complete onboarding and go to dashboard
+      toast.success("Application submitted successfully!");
+      navigate("/dashboard");
+    } else {
+      // User is not registered - go to signup
+      toast.success("Application submitted! Create your account to continue.");
+      navigate("/signup");
+    }
     
     setIsSubmitting(false);
   };
@@ -112,7 +122,10 @@ export default function ReviewTabLocal() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Review & Submit</h2>
         <p className="text-muted-foreground mt-1">
-          Review your application before creating your account.
+          {isLoggedIn 
+            ? "Review your application before submitting."
+            : "Review your application before creating your account."
+          }
         </p>
       </div>
 
@@ -309,7 +322,10 @@ export default function ReviewTabLocal() {
               Ready to submit!
             </p>
             <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-              After submitting, you'll create your account to track your application status.
+              {isLoggedIn 
+                ? "Your application will be submitted for review."
+                : "After submitting, you'll create your account to track your application status."
+              }
             </p>
           </div>
         </div>
@@ -335,7 +351,7 @@ export default function ReviewTabLocal() {
           ) : (
             <Send className="w-4 h-4 mr-2" />
           )}
-          Submit & Create Account
+          {isLoggedIn ? "Submit Application" : "Submit & Create Account"}
         </Button>
       </div>
     </div>
