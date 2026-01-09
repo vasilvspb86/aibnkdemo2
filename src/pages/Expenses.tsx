@@ -22,12 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
   Receipt, 
@@ -38,7 +32,6 @@ import {
   Clock,
   Image,
   TrendingUp,
-  MoreHorizontal,
   X,
   XCircle
 } from "lucide-react";
@@ -436,37 +429,6 @@ export default function Expenses() {
                           {expense.currency} {Number(expense.amount).toLocaleString()}
                         </p>
                         <StatusBadge status={expense.status} />
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {expense.status === "pending" && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(expense, "approved")}>
-                                    <Check className="h-4 w-4 mr-2" />
-                                    Approve
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleStatusChange(expense, "rejected")}>
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Reject
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {expense.receipt_url && (
-                                <DropdownMenuItem asChild>
-                                  <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer">
-                                    <Image className="h-4 w-4 mr-2" />
-                                    View Receipt
-                                  </a>
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
                       </div>
                     </div>
                   ))
