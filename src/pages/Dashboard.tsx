@@ -190,13 +190,13 @@ export default function Dashboard() {
                       {kybConfig.descriptionPrefix}
                     </Link>{" "}
                   </>
-                ) : hasLocalOnboarding ? (
+                ) : (hasLocalOnboarding && !localOnboardingData.submitted) ? (
                   <Link to={getOnboardingNextStep()} className="text-primary hover:underline font-medium">
                     Continue application →
                   </Link>
                 ) : null}
-                {!hasLocalOnboarding && kybConfig.description}
-                {hasLocalOnboarding && !kybConfig.descriptionPrefix && ` ${kybConfig.description}`}
+                {(!hasLocalOnboarding || localOnboardingData.submitted) && kybConfig.description}
+                {hasLocalOnboarding && !localOnboardingData.submitted && !kybConfig.descriptionPrefix && ` ${kybConfig.description}`}
               </p>
             </div>
           </div>
