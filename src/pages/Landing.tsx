@@ -51,7 +51,7 @@ const features = [
 ];
 
 const stats = [
-  { value: "< 1 min", label: "Account Opening" },
+  { value: "< 10 min", label: "Account Opening" },
   { value: "24/7", label: "AI Support" },
   { value: "0 AED", label: "Monthly Fees" },
   { value: "150+", label: "Countries Supported" },
