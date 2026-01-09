@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { 
   User, 
   Building2, 
@@ -26,7 +30,8 @@ import {
   Clock,
   AlertCircle,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 
 const teamMembers = [
@@ -48,6 +53,61 @@ const kybStatusConfig: Record<string, { label: string; color: string; icon: Reac
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const { organization, kybApplication, isLoading } = useDashboardData();
+  const { user } = useAuth();
+  
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  
+  // Load profile data
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, phone")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (data) {
+        const names = (data.display_name || "").split(" ");
+        setFirstName(names[0] || "");
+        setLastName(names.slice(1).join(" ") || "");
+        setPhone(data.phone || "");
+      }
+    };
+    
+    loadProfile();
+  }, [user?.id]);
+  
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+    
+    setProfileLoading(true);
+    try {
+      const displayName = `${firstName} ${lastName}`.trim();
+      
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          user_id: user.id,
+          display_name: displayName,
+          phone: phone,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "user_id" });
+      
+      if (error) throw error;
+      
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
   
   const kybStatus = kybApplication?.status || null;
   const statusConfig = kybStatus ? kybStatusConfig[kybStatus] : null;
@@ -96,22 +156,42 @@ export default function Settings() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>First Name</Label>
-                  <Input defaultValue="John" />
+                  <Input 
+                    value={firstName} 
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Last Name</Label>
-                  <Input defaultValue="Doe" />
+                  <Input 
+                    value={lastName} 
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" defaultValue="john@acme.com" />
+                <Input type="email" value={user?.email || ""} disabled />
               </div>
               <div className="space-y-2">
                 <Label>Phone</Label>
-                <Input type="tel" defaultValue="+971 50 123 4567" />
+                <Input 
+                  type="tel" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+971 50 123 4567"
+                />
               </div>
-              <Button className="gradient-primary">Save Changes</Button>
+              <Button 
+                className="gradient-primary" 
+                onClick={handleSaveProfile}
+                disabled={profileLoading}
+              >
+                {profileLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
+              </Button>
             </CardContent>
           </Card>
 
