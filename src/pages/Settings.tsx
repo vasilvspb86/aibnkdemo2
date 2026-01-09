@@ -5,7 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { Link } from "react-router-dom";
 import { 
   User, 
   Building2, 
@@ -18,7 +21,12 @@ import {
   Smartphone,
   Key,
   Sun,
-  Moon
+  Moon,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  XCircle,
+  ArrowRight
 } from "lucide-react";
 
 const teamMembers = [
@@ -27,8 +35,22 @@ const teamMembers = [
   { id: 3, name: "Mike Johnson", email: "mike@acme.com", role: "Employee", status: "pending" },
 ];
 
+const kybStatusConfig: Record<string, { label: string; color: string; icon: React.ElementType; description: string }> = {
+  draft: { label: "Draft", color: "bg-muted text-muted-foreground", icon: Clock, description: "Your application is saved as a draft" },
+  submitted: { label: "Submitted", color: "bg-blue-500/10 text-blue-600", icon: Clock, description: "Your application is awaiting review" },
+  in_review: { label: "In Review", color: "bg-amber-500/10 text-amber-600", icon: Clock, description: "Our team is reviewing your application" },
+  needs_info: { label: "Needs Information", color: "bg-orange-500/10 text-orange-600", icon: AlertCircle, description: "Additional information is required" },
+  approved: { label: "Approved", color: "bg-green-500/10 text-green-600", icon: CheckCircle2, description: "Your application has been approved" },
+  account_ready: { label: "Account Ready", color: "bg-accent/10 text-accent", icon: CheckCircle2, description: "Your account is active and ready to use" },
+  rejected: { label: "Rejected", color: "bg-destructive/10 text-destructive", icon: XCircle, description: "Your application was not approved" },
+};
+
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
+  const { organization, kybApplication, isLoading } = useDashboardData();
+  
+  const kybStatus = kybApplication?.status || null;
+  const statusConfig = kybStatus ? kybStatusConfig[kybStatus] : null;
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -163,6 +185,76 @@ export default function Settings() {
 
         {/* Company Tab */}
         <TabsContent value="company" className="space-y-6">
+          {/* Onboarding Status Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Onboarding Status</CardTitle>
+              <CardDescription>Your business verification status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              ) : !kybStatus ? (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
+                  <div>
+                    <p className="font-medium">Complete your business verification</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Start the onboarding process to unlock all features
+                    </p>
+                  </div>
+                  <Button asChild className="gradient-primary gap-2">
+                    <Link to="/onboarding">
+                      Start Onboarding
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {statusConfig && (
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${statusConfig.color}`}>
+                          <statusConfig.icon className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">Application Status</p>
+                          {statusConfig && (
+                            <Badge className={statusConfig.color}>{statusConfig.label}</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {statusConfig?.description}
+                        </p>
+                      </div>
+                    </div>
+                    {(kybStatus === "draft" || kybStatus === "needs_info") && (
+                      <Button asChild variant="outline" className="gap-2">
+                        <Link to="/onboarding">
+                          {kybStatus === "draft" ? "Continue" : "Update Info"}
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {(kybStatus !== "draft" && kybStatus !== "needs_info") && (
+                      <Button asChild variant="outline" className="gap-2">
+                        <Link to="/onboarding-status">
+                          View Details
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Company Information</CardTitle>
@@ -171,21 +263,21 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Company Name</Label>
-                <Input defaultValue="Acme Startup FZ-LLC" disabled />
+                <Input defaultValue={organization?.name || "—"} disabled />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Trade License</Label>
-                  <Input defaultValue="TL-2024-12345" disabled />
+                  <Input defaultValue={organization?.trade_license_number || "—"} disabled />
                 </div>
                 <div className="space-y-2">
                   <Label>Jurisdiction</Label>
-                  <Input defaultValue="DIFC" disabled />
+                  <Input defaultValue={organization?.jurisdiction || "—"} disabled />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Registered Address</Label>
-                <Input defaultValue="Gate Village, DIFC, Dubai, UAE" disabled />
+                <Input defaultValue={organization?.registered_address || "—"} disabled />
               </div>
               <p className="text-sm text-muted-foreground">
                 To update company information, please contact support.
