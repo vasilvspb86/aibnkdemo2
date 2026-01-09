@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDashboardData, formatRelativeTime } from "@/hooks/use-dashboard-data";
+import { useAuth } from "@/hooks/use-auth";
 
 const quickActions = [
   { label: "Send Money", icon: ArrowUpRight, path: "/payments", color: "bg-primary" },
@@ -23,6 +24,7 @@ const quickActions = [
 ];
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { 
     account, 
     transactions, 
@@ -32,7 +34,18 @@ export default function Dashboard() {
     isLoading 
   } = useDashboardData();
 
-  const companyName = organization?.name?.split(" ")[0] || "there";
+  // Get user's display name from auth metadata, email, or fallback to company name
+  const getUserName = () => {
+    const displayName = user?.user_metadata?.display_name;
+    if (displayName) return displayName.split(" ")[0]; // First name only
+    
+    const email = user?.email;
+    if (email) return email.split("@")[0]; // Username part of email
+    
+    return organization?.name?.split(" ")[0] || "there";
+  };
+
+  const userName = getUserName();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -40,7 +53,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-display font-bold">
-            Good {getTimeOfDay()}, {companyName}
+            Good {getTimeOfDay()}, {userName}
           </h1>
           <p className="text-muted-foreground mt-1">Here's what's happening with your business today.</p>
         </div>
