@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, User, CreditCard, CheckCircle2, ArrowRight, RotateCcw } from "lucide-react";
 import { useLocalOnboarding, clearLocalOnboardingData } from "@/hooks/use-local-onboarding";
+import { useAuth } from "@/hooks/use-auth";
 
 const requirements = [
   {
@@ -24,6 +25,7 @@ const requirements = [
 
 export default function OnboardingWelcome() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data, progress } = useLocalOnboarding();
   
   // Check if there's existing onboarding data
@@ -41,12 +43,21 @@ export default function OnboardingWelcome() {
     navigate("/onboarding-local/company");
   };
 
+  const handleLogoClick = () => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
       <div className="w-full max-w-lg space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 
+            className={`text-3xl font-bold tracking-tight ${user ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            onClick={handleLogoClick}
+          >
             <span className="text-primary">AI</span>BNK
           </h1>
         </div>
