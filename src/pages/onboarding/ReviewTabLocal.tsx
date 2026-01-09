@@ -16,8 +16,9 @@ import {
   Send,
   Pencil,
 } from "lucide-react";
-import { useLocalOnboarding } from "@/hooks/use-local-onboarding";
+import { useLocalOnboarding, LocalOnboardingData, clearLocalOnboardingData } from "@/hooks/use-local-onboarding";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const purposeLabels: Record<string, string> = {
@@ -69,23 +70,132 @@ export default function ReviewTabLocal() {
 
   const canSubmit = companyComplete && ownerComplete && complianceComplete && allDocsAccepted;
 
+  // Save onboarding data to database for logged-in users
+  const saveOnboardingToDatabase = async (userId: string, onboardingData: LocalOnboardingData) => {
+    try {
+      // 1. Create onboarding case
+      const { data: caseData, error: caseError } = await supabase
+        .from("onboarding_cases")
+        .insert({
+          user_id: userId,
+          status: "submitted",
+          submitted_at: new Date().toISOString(),
+          progress_percent: 100,
+        })
+        .select()
+        .single();
+
+      if (caseError) throw caseError;
+
+      const caseId = caseData.id;
+
+      // 2. Create company profile
+      await supabase.from("company_profiles").insert({
+        case_id: caseId,
+        issuing_authority: onboardingData.company.issuing_authority,
+        trade_license_number: onboardingData.company.trade_license_number,
+        company_legal_name: onboardingData.company.company_legal_name,
+        legal_form: onboardingData.company.legal_form,
+        registered_address: onboardingData.company.registered_address,
+        business_activity: onboardingData.company.business_activity,
+        operating_address: onboardingData.company.operating_address || null,
+        website: onboardingData.company.website || null,
+        prefill_source: onboardingData.company.prefill_source,
+        confirmed_by_user: onboardingData.company.confirmed_by_user,
+      });
+
+      // 3. Create onboarding person (owner)
+      await supabase.from("onboarding_persons").insert({
+        case_id: caseId,
+        full_name: onboardingData.owner.full_name,
+        dob: onboardingData.owner.dob || null,
+        nationality: onboardingData.owner.nationality,
+        email: onboardingData.owner.email || null,
+        phone: onboardingData.owner.phone || null,
+        emirates_id_number: onboardingData.owner.emirates_id_number || null,
+        roles: onboardingData.owner.roles as any,
+        ownership_percent: onboardingData.owner.ownership_percent,
+        is_uae_resident: onboardingData.owner.is_uae_resident,
+      });
+
+      // 4. Create compliance answers
+      await supabase.from("compliance_answers").insert({
+        case_id: caseId,
+        account_use_purpose: onboardingData.compliance.account_use_purpose as any,
+        expected_monthly_volume_band: onboardingData.compliance.expected_monthly_volume_band as any,
+        customer_location: onboardingData.compliance.customer_location as any,
+        cash_activity: onboardingData.compliance.cash_activity,
+        pep_confirmation: onboardingData.compliance.pep_confirmation as any,
+        other_controllers: onboardingData.compliance.other_controllers,
+      });
+
+      // 5. Create document records
+      const docPromises = Object.entries(onboardingData.documents).map(([docType, docData]) =>
+        supabase.from("onboarding_documents").insert({
+          case_id: caseId,
+          document_type: docType as any,
+          file_name: docData.file_name,
+          status: "accepted" as any,
+          uploaded_at: docData.uploaded_at,
+        })
+      );
+      await Promise.all(docPromises);
+
+      // 6. Create submitted event
+      await supabase.from("onboarding_events").insert({
+        case_id: caseId,
+        event_type: "case_submitted",
+        actor: "user",
+        metadata: { source: "review_tab" },
+      });
+
+      // 7. Auto-progress to in_review after a short delay
+      setTimeout(async () => {
+        try {
+          await supabase
+            .from("onboarding_cases")
+            .update({ status: "in_review" })
+            .eq("id", caseId);
+          
+          await supabase.from("onboarding_events").insert({
+            case_id: caseId,
+            event_type: "case_in_review",
+            actor: "system",
+            metadata: { note: "Application moved to review queue" },
+          });
+        } catch (err) {
+          console.error("Auto-progress error:", err);
+        }
+      }, 5000);
+
+      return caseId;
+    } catch (error) {
+      console.error("Error saving onboarding data:", error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
     setIsSubmitting(true);
     
-    // Simulate submission delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Mark as submitted in localStorage
-    markSubmitted();
-    
-    if (isLoggedIn) {
-      // User is already registered - complete onboarding and go to dashboard
-      toast.success("Application submitted successfully!");
-      navigate("/dashboard");
+    if (isLoggedIn && user) {
+      // User is logged in - save to database
+      try {
+        await saveOnboardingToDatabase(user.id, data);
+        clearLocalOnboardingData();
+        toast.success("Application submitted successfully!");
+        navigate("/dashboard");
+      } catch (error) {
+        console.error("Failed to save onboarding:", error);
+        toast.error("Failed to submit application. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
     } else {
-      // User is not registered - go to signup
+      // User is not registered - mark as submitted locally and go to signup
+      markSubmitted();
       toast.success("Application submitted! Create your account to continue.");
       navigate("/signup");
     }
