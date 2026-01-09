@@ -522,15 +522,6 @@ export default function Invoices() {
                       <Button variant="ghost" size="icon">
                         <Download className="h-4 w-4" />
                       </Button>
-                      {invoice.status === "draft" && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleStatusChange(invoice, "sent")}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
