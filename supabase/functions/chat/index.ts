@@ -139,6 +139,33 @@ async function fetchUserContext(supabase: any) {
     }
   }
 
+  // Fetch beneficiaries (payment counterparties)
+  const { data: beneficiaries } = await supabase
+    .from("beneficiaries")
+    .select("name, bank_name, currency, vendor_type")
+    .eq("is_active", true)
+    .limit(20);
+
+  if (beneficiaries?.length) {
+    context.push("\n## Available Beneficiaries (for payments)");
+    context.push("These are the existing payment recipients the user can pay:");
+    beneficiaries.forEach((b: any) => {
+      context.push(`- ${b.name}${b.vendor_type ? ` (${b.vendor_type})` : ""}${b.bank_name ? ` - ${b.bank_name}` : ""}`);
+    });
+  }
+
+  // Extract unique invoice clients
+  if (invoices?.length) {
+    const uniqueClients = [...new Set(invoices.map((inv: any) => inv.client_name as string))];
+    if (uniqueClients.length > 0) {
+      context.push("\n## Existing Invoice Clients");
+      context.push("These are clients the user has previously invoiced:");
+      uniqueClients.forEach((client) => {
+        context.push(`- ${client}`);
+      });
+    }
+  }
+
   // Fetch cards summary
   const { data: cards } = await supabase
     .from("cards")
@@ -207,12 +234,17 @@ Guidelines:
 - Keep responses focused and actionable
 - When you cite numbers, mention they are from "your account data"
 
+IMPORTANT - Suggestions for invoices and payments:
+- When SUGGESTING or RECOMMENDING invoice or payment actions proactively, ONLY suggest existing counterparties from the user's data (see "Available Beneficiaries" for payments, "Existing Invoice Clients" for invoices)
+- However, if the user EXPLICITLY ASKS to create an invoice or payment with specific details (including new counterparties not in their data), proceed with their request - the user knows what they want
+- For suggestions, phrase them like: "Would you like me to prepare an invoice for [existing client name]?" or "I can help you make a payment to [existing beneficiary name]"
+
 ${userContext ? `
 --- USER'S CURRENT FINANCIAL DATA ---
 ${userContext}
 --- END FINANCIAL DATA ---
 
-Use this data to provide accurate, personalized responses. Reference specific numbers, transactions, and invoices when relevant.` : "No financial data available for this user."}`;
+Use this data to provide accurate, personalized responses. Reference specific numbers, transactions, and invoices when relevant. When suggesting actions, prefer existing counterparties from the data above.` : "No financial data available for this user."}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
