@@ -3,7 +3,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatAction {
-  type: "create_invoice" | "create_payment" | "approve_expense" | "view_account" | "navigate";
+  type: "create_invoice" | "create_payment" | "approve_expense" | "view_account" | "navigate" | "create_alert" | "delete_alert";
   label: string;
   data?: Record<string, any>;
   executed?: boolean;
@@ -36,8 +36,51 @@ function parseActionsFromResponse(content: string, navigationTarget?: { path: st
     });
   }
   
-  // Detect invoice creation intent (only if not navigating)
-  if (!navigationTarget && content.toLowerCase().includes("create") && content.toLowerCase().includes("invoice")) {
+  // Detect alert creation intent
+  const alertMatch = content.match(/\[ALERT:\s*type=([^,]+),\s*amount=(\d+(?:\.\d+)?),\s*category=([^\]]+)\]/i);
+  if (alertMatch) {
+    const alertType = alertMatch[1].trim();
+    const amount = parseFloat(alertMatch[2]);
+    const category = alertMatch[3].trim() === "null" ? null : alertMatch[3].trim();
+    
+    const typeLabels: Record<string, string> = {
+      daily_limit: "Daily Spending Alert",
+      weekly_limit: "Weekly Spending Alert",
+      monthly_limit: "Monthly Spending Alert",
+      category_limit: `Category Alert${category ? ` (${category})` : ""}`,
+      trend_warning: "Trend Warning Alert",
+      large_transaction: "Large Transaction Alert",
+    };
+    
+    actions.push({
+      type: "create_alert",
+      label: `Set ${typeLabels[alertType] || alertType}: AED ${amount.toLocaleString()}`,
+      data: {
+        alert_type: alertType,
+        threshold_amount: amount,
+        category,
+      },
+    });
+  }
+  
+  // Detect alert deletion intent
+  const deleteAlertMatch = content.match(/\[DELETE_ALERT:\s*type=([^,]+),\s*category=([^\]]+)\]/i);
+  if (deleteAlertMatch) {
+    const alertType = deleteAlertMatch[1].trim();
+    const category = deleteAlertMatch[2].trim() === "null" ? null : deleteAlertMatch[2].trim();
+    
+    actions.push({
+      type: "delete_alert",
+      label: `Remove ${alertType.replace(/_/g, " ")} alert${category ? ` for ${category}` : ""}`,
+      data: {
+        alert_type: alertType,
+        category,
+      },
+    });
+  }
+  
+  // Detect invoice creation intent (only if not navigating and no alert action)
+  if (!navigationTarget && !alertMatch && content.toLowerCase().includes("create") && content.toLowerCase().includes("invoice")) {
     const amountMatch = content.match(/(?:AED|USD|EUR)\s*([\d,]+(?:\.\d{2})?)/i);
     const clientMatch = content.match(/(?:for|to|client[:\s]+)([A-Za-z\s]+?)(?:\s*[-–—]|\s*for|\s*\.|,|\n|$)/i);
     
@@ -51,8 +94,8 @@ function parseActionsFromResponse(content: string, navigationTarget?: { path: st
     });
   }
   
-  // Detect payment intent (only if not navigating)
-  if (!navigationTarget && (content.toLowerCase().includes("pay") || content.toLowerCase().includes("payment")) && 
+  // Detect payment intent (only if not navigating and no alert action)
+  if (!navigationTarget && !alertMatch && (content.toLowerCase().includes("pay") || content.toLowerCase().includes("payment")) && 
       (content.toLowerCase().includes("prepare") || content.toLowerCase().includes("create") || content.toLowerCase().includes("send"))) {
     const amountMatch = content.match(/(?:AED|USD|EUR)\s*([\d,]+(?:\.\d{2})?)/i);
     const vendorMatch = content.match(/(?:to|vendor|pay)\s+([A-Za-z\s]+?)(?:\s*[-–—]|\s*for|\s*\.|,|\n|$)/i);
@@ -441,6 +484,69 @@ export function useAIChat() {
           toast({
             title: "Payment Prepared",
             description: "Draft payment has been created. Go to Payments to review and approve.",
+          });
+          
+          setMessages(prev => prev.map(m => {
+            if (m.id === messageId && m.actions) {
+              const newActions = [...m.actions];
+              newActions[actionIndex] = { ...newActions[actionIndex], executed: true };
+              return { ...m, actions: newActions };
+            }
+            return m;
+          }));
+          
+          return true;
+        }
+        
+        case "create_alert": {
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          const { error } = await supabase.from("spending_alerts").insert({
+            organization_id: DEMO_ORG_ID,
+            user_id: user?.id,
+            alert_type: action.data?.alert_type,
+            threshold_amount: action.data?.threshold_amount,
+            category: action.data?.category || null,
+            is_active: true,
+          });
+          
+          if (error) throw error;
+          
+          toast({
+            title: "Spending Alert Created",
+            description: `Alert set for AED ${action.data?.threshold_amount?.toLocaleString()}. You'll be notified when this threshold is reached.`,
+          });
+          
+          setMessages(prev => prev.map(m => {
+            if (m.id === messageId && m.actions) {
+              const newActions = [...m.actions];
+              newActions[actionIndex] = { ...newActions[actionIndex], executed: true };
+              return { ...m, actions: newActions };
+            }
+            return m;
+          }));
+          
+          return true;
+        }
+        
+        case "delete_alert": {
+          let query = supabase
+            .from("spending_alerts")
+            .delete()
+            .eq("organization_id", DEMO_ORG_ID)
+            .eq("alert_type", action.data?.alert_type);
+          
+          if (action.data?.category) {
+            query = query.eq("category", action.data.category);
+          }
+          
+          const { error } = await query;
+          
+          if (error) throw error;
+          
+          toast({
+            title: "Alert Removed",
+            description: "The spending alert has been deleted.",
           });
           
           setMessages(prev => prev.map(m => {

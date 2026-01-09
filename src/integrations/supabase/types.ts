@@ -996,6 +996,45 @@ export type Database = {
         }
         Relationships: []
       }
+      spending_alerts: {
+        Row: {
+          alert_type: string
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          notification_sent_at: string | null
+          organization_id: string
+          threshold_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notification_sent_at?: string | null
+          organization_id?: string
+          threshold_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notification_sent_at?: string | null
+          organization_id?: string
+          threshold_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_id: string
