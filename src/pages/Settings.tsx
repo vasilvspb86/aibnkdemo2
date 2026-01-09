@@ -52,7 +52,7 @@ const kybStatusConfig: Record<string, { label: string; color: string; icon: Reac
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { organization, kybApplication, isLoading } = useDashboardData();
+  const { organization, kybApplication, companyProfile, isLoading } = useDashboardData();
   const { user } = useAuth();
   
   const [profileLoading, setProfileLoading] = useState(false);
@@ -335,7 +335,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {(kybStatus === "approved" || kybStatus === "account_ready") && (
+          {(kybStatus === "approved" || kybStatus === "account_ready" || kybStatus === "submitted" || kybStatus === "in_review") && (
             <Card>
               <CardHeader>
                 <CardTitle>Company Information</CardTitle>
@@ -344,22 +344,63 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Company Name</Label>
-                  <Input defaultValue={organization?.name || "—"} disabled />
+                  <Input 
+                    value={companyProfile?.company_legal_name || organization?.name || "—"} 
+                    disabled 
+                  />
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Trade License</Label>
-                    <Input defaultValue={organization?.trade_license_number || "—"} disabled />
+                    <Input 
+                      value={companyProfile?.trade_license_number || organization?.trade_license_number || "—"} 
+                      disabled 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Jurisdiction</Label>
-                    <Input defaultValue={organization?.jurisdiction || "—"} disabled />
+                    <Label>Issuing Authority</Label>
+                    <Input 
+                      value={companyProfile?.issuing_authority || organization?.jurisdiction || "—"} 
+                      disabled 
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Registered Address</Label>
-                  <Input defaultValue={organization?.registered_address || "—"} disabled />
+                  <Label>Legal Form</Label>
+                  <Input 
+                    value={companyProfile?.legal_form || organization?.legal_form || "—"} 
+                    disabled 
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label>Business Activity</Label>
+                  <Input 
+                    value={companyProfile?.business_activity || organization?.business_activity || "—"} 
+                    disabled 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Registered Address</Label>
+                  <Input 
+                    value={companyProfile?.registered_address || organization?.registered_address || "—"} 
+                    disabled 
+                  />
+                </div>
+                {companyProfile?.operating_address && (
+                  <div className="space-y-2">
+                    <Label>Operating Address</Label>
+                    <Input value={companyProfile.operating_address} disabled />
+                  </div>
+                )}
+                {(companyProfile?.website || organization?.website) && (
+                  <div className="space-y-2">
+                    <Label>Website</Label>
+                    <Input 
+                      value={companyProfile?.website || organization?.website || "—"} 
+                      disabled 
+                    />
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground">
                   To update company information, please contact support.
                 </p>

@@ -166,10 +166,25 @@ export function useDashboardData() {
     },
   });
 
-  // Fetch KYB status
+  // Fetch KYB status (check both old kyb_applications and new onboarding_cases)
   const { data: kybApplication, isLoading: kybLoading } = useQuery({
-    queryKey: ["kyb-application", DEMO_ORG_ID],
+    queryKey: ["kyb-application", user?.id, DEMO_ORG_ID],
     queryFn: async () => {
+      // First check new onboarding_cases for the current user
+      if (user?.id) {
+        const { data: onboardingCase } = await supabase
+          .from("onboarding_cases")
+          .select("status, id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .maybeSingle();
+        
+        if (onboardingCase) {
+          return { status: onboardingCase.status, caseId: onboardingCase.id };
+        }
+      }
+      
+      // Fallback to old kyb_applications for demo org
       const { data, error } = await supabase
         .from("kyb_applications")
         .select("status")
@@ -182,7 +197,33 @@ export function useDashboardData() {
     },
   });
 
-  const isLoading = accountLoading || transactionsLoading || cardTransactionsLoading || summaryLoading || invoicesLoading || orgLoading;
+  // Fetch company profile from new onboarding flow
+  const { data: companyProfile, isLoading: companyProfileLoading } = useQuery({
+    queryKey: ["company-profile", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      // Get the user's onboarding case first
+      const { data: onboardingCase } = await supabase
+        .from("onboarding_cases")
+        .select("id")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+      
+      if (!onboardingCase) return null;
+      
+      const { data, error } = await supabase
+        .from("company_profiles")
+        .select("*")
+        .eq("case_id", onboardingCase.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const isLoading = accountLoading || transactionsLoading || cardTransactionsLoading || summaryLoading || invoicesLoading || orgLoading || kybLoading || companyProfileLoading;
 
   return {
     account,
@@ -191,6 +232,7 @@ export function useDashboardData() {
     pendingInvoices,
     organization,
     kybApplication,
+    companyProfile,
     isLoading,
   };
 }
