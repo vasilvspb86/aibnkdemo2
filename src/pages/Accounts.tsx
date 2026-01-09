@@ -10,7 +10,6 @@ import {
   ArrowUpRight, 
   ArrowDownLeft,
   Search,
-  MoreHorizontal,
   Eye,
   EyeOff,
   CreditCard
@@ -75,25 +74,16 @@ export default function Accounts() {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
-            {tx.type === "credit" ? "+" : "-"}AED {Number(tx.amount).toLocaleString()}
-          </p>
-          <Badge 
-            variant={tx.status === "completed" ? "outline" : "secondary"}
-            className="text-xs capitalize"
-          >
-            {tx.status}
-          </Badge>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
+      <div className="text-right">
+        <p className={`font-semibold ${tx.type === "credit" ? "text-accent" : ""}`}>
+          {tx.type === "credit" ? "+" : "-"}AED {Number(tx.amount).toLocaleString()}
+        </p>
+        <Badge 
+          variant={tx.status === "completed" ? "outline" : "secondary"}
+          className="text-xs capitalize"
         >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
+          {tx.status}
+        </Badge>
       </div>
     </div>
   );
