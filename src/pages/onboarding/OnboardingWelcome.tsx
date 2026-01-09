@@ -73,7 +73,7 @@ export default function OnboardingWelcome() {
 
             {/* CTA */}
             <Button
-              onClick={() => navigate("/verify")}
+              onClick={() => navigate("/onboarding-local/company")}
               className="w-full h-12 text-base font-medium"
               size="lg"
             >
