@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ export default function Assistant() {
   const [input, setInput] = useState("");
   const [executingActions, setExecutingActions] = useState<Record<string, boolean>>({});
   const [suggestedPrompts, setSuggestedPrompts] = useState<SuggestedPrompt[]>(defaultPrompts);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Fetch real counterparty data for suggested prompts
@@ -101,6 +102,13 @@ export default function Assistant() {
     fetchCounterparties();
   }, []);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isLoading]);
+
   const handleSend = () => {
     if (!input.trim()) return;
     sendMessage(input);
@@ -148,7 +156,7 @@ export default function Assistant() {
 
       <Card className="flex-1 flex flex-col overflow-hidden">
         <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4 max-w-3xl mx-auto">
+          <div className="space-y-4 max-w-3xl mx-auto pb-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -222,6 +230,7 @@ export default function Assistant() {
                 </div>
               </div>
             )}
+            <div ref={scrollRef} />
           </div>
         </ScrollArea>
 
