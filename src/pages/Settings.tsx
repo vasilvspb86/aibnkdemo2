@@ -335,35 +335,37 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Company Information</CardTitle>
-              <CardDescription>Your registered business details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Company Name</Label>
-                <Input defaultValue={organization?.name || "—"} disabled />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
+          {(kybStatus === "approved" || kybStatus === "account_ready") && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Company Information</CardTitle>
+                <CardDescription>Your registered business details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Trade License</Label>
-                  <Input defaultValue={organization?.trade_license_number || "—"} disabled />
+                  <Label>Company Name</Label>
+                  <Input defaultValue={organization?.name || "—"} disabled />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Trade License</Label>
+                    <Input defaultValue={organization?.trade_license_number || "—"} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Jurisdiction</Label>
+                    <Input defaultValue={organization?.jurisdiction || "—"} disabled />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Jurisdiction</Label>
-                  <Input defaultValue={organization?.jurisdiction || "—"} disabled />
+                  <Label>Registered Address</Label>
+                  <Input defaultValue={organization?.registered_address || "—"} disabled />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Registered Address</Label>
-                <Input defaultValue={organization?.registered_address || "—"} disabled />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                To update company information, please contact support.
-              </p>
-            </CardContent>
-          </Card>
+                <p className="text-sm text-muted-foreground">
+                  To update company information, please contact support.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Team Tab */}
