@@ -14,7 +14,10 @@ import {
   RefreshCw,
   Check,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Bell,
+  BarChart3,
+  Wallet
 } from "lucide-react";
 import { useAIChat, ChatAction } from "@/hooks/use-ai-chat";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +41,8 @@ const actionIcons: Record<string, typeof FileText> = {
   approve_expense: Check,
   view_account: CreditCard,
   navigate: ExternalLink,
+  create_alert: Bell,
+  delete_alert: Bell,
 };
 
 export default function Assistant() {
@@ -70,6 +75,7 @@ export default function Assistant() {
 
         const prompts: SuggestedPrompt[] = [
           { icon: TrendingUp, text: "What's my current account balance and recent activity?" },
+          { icon: BarChart3, text: "Show me my weekly and monthly spending trends" },
         ];
 
         // Add invoice suggestion with real client name
@@ -91,7 +97,12 @@ export default function Assistant() {
           });
         }
 
-        prompts.push({ icon: CreditCard, text: "Show my card spending breakdown" });
+        // Add spending alerts and cards prompts
+        prompts.push(
+          { icon: Bell, text: "Set a daily spending alert at AED 5,000" },
+          { icon: CreditCard, text: "Show my card spending breakdown by category" },
+          { icon: Wallet, text: "What are my top spending destinations this month?" },
+        );
 
         setSuggestedPrompts(prompts);
       } catch (error) {
