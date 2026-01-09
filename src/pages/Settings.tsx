@@ -298,8 +298,31 @@ export default function Settings() {
                   <Skeleton className="h-4 w-48" />
                 </div>
               ) : !kybStatus ? (
-                // Check for local onboarding in progress
-                hasLocalOnboarding ? (
+                // Check for local onboarding - submitted vs in progress
+                localOnboardingData.submitted ? (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center bg-primary/20">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">Application Submitted</p>
+                          <Badge className="bg-primary/10 text-primary border-primary/20">Submitted</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          Your application is awaiting review
+                        </p>
+                      </div>
+                    </div>
+                    <Button asChild variant="outline" className="gap-2">
+                      <Link to="/onboarding-local/review">
+                        Review Application
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                ) : hasLocalOnboarding ? (
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-muted/50">
                     <div>
                       <div className="flex items-center gap-2">
@@ -452,8 +475,8 @@ export default function Settings() {
             </Card>
           )}
 
-          {/* Documents Verification Section */}
-          <DocumentsVerification />
+          {/* Documents Verification Section - only show if not submitted */}
+          {!localOnboardingData.submitted && <DocumentsVerification />}
         </TabsContent>
 
         {/* Team Tab */}
