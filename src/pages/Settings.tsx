@@ -12,6 +12,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import DocumentsVerification from "@/components/settings/DocumentsVerification";
 import { toast } from "sonner";
 import { 
   User, 
@@ -407,6 +408,9 @@ export default function Settings() {
               </CardContent>
             </Card>
           )}
+
+          {/* Documents Verification Section */}
+          <DocumentsVerification />
         </TabsContent>
 
         {/* Team Tab */}
