@@ -283,6 +283,9 @@ export function usePaymentsData() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["account"] });
+      // Accounts page uses different query keys, so make sure we refresh those too
+      queryClient.invalidateQueries({ queryKey: ["account-transactions", DEMO_ACCOUNT_ID] });
+      queryClient.invalidateQueries({ queryKey: ["account-details", DEMO_ACCOUNT_ID] });
       toast.success("Payment approved and completed");
     },
     onError: (error) => {
