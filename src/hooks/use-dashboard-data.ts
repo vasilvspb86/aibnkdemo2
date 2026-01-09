@@ -89,29 +89,43 @@ export function useDashboardData() {
       .slice(0, 5);
   })();
 
-  // Fetch 30-day transaction summary
+  // Fetch 30-day transaction summary (including card transactions)
   const { data: transactionSummary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["transaction-summary", DEMO_ACCOUNT_ID],
+    queryKey: ["transaction-summary", DEMO_ACCOUNT_ID, DEMO_ORG_ID],
     queryFn: async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data, error } = await supabase
+      // Fetch account transactions
+      const { data: accountTxs, error: accountError } = await supabase
         .from("transactions")
         .select("type, amount")
         .eq("account_id", DEMO_ACCOUNT_ID)
         .gte("created_at", thirtyDaysAgo.toISOString());
       
-      if (error) throw error;
+      if (accountError) throw accountError;
 
-      const incoming = data?.filter(t => t.type === "credit") || [];
-      const outgoing = data?.filter(t => t.type === "debit") || [];
+      // Fetch card transactions for the org
+      const { data: cardTxs, error: cardError } = await supabase
+        .from("card_transactions")
+        .select("amount, cards!inner(organization_id)")
+        .eq("cards.organization_id", DEMO_ORG_ID)
+        .gte("created_at", thirtyDaysAgo.toISOString());
+      
+      if (cardError) throw cardError;
+
+      const incoming = accountTxs?.filter(t => t.type === "credit") || [];
+      const outgoingAccount = accountTxs?.filter(t => t.type === "debit") || [];
+      const outgoingCard = cardTxs || [];
+
+      const outgoingAccountTotal = outgoingAccount.reduce((sum, t) => sum + Number(t.amount), 0);
+      const outgoingCardTotal = outgoingCard.reduce((sum, t) => sum + Number(t.amount), 0);
 
       return {
         incomingTotal: incoming.reduce((sum, t) => sum + Number(t.amount), 0),
         incomingCount: incoming.length,
-        outgoingTotal: outgoing.reduce((sum, t) => sum + Number(t.amount), 0),
-        outgoingCount: outgoing.length,
+        outgoingTotal: outgoingAccountTotal + outgoingCardTotal,
+        outgoingCount: outgoingAccount.length + outgoingCard.length,
       };
     },
   });
