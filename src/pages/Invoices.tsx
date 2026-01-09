@@ -166,7 +166,7 @@ export default function Invoices() {
   };
 
   const handleUpdateInvoice = async (sendImmediately: boolean) => {
-    if (!editingInvoice || !clientName || lineItems.every((item) => !item.description)) {
+    if (!editingInvoice || !clientName) {
       return;
     }
 
