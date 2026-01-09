@@ -10,7 +10,8 @@ import {
   FileText, 
   ArrowRight,
   Building2,
-  Sparkles
+  Sparkles,
+  Receipt
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDashboardData, formatRelativeTime } from "@/hooks/use-dashboard-data";
@@ -209,6 +210,8 @@ export default function Dashboard() {
                     }`}>
                       {tx.source === "card" ? (
                         <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      ) : tx.source === "expense" ? (
+                        <Receipt className="h-5 w-5 text-muted-foreground" />
                       ) : tx.type === "credit" ? (
                         <ArrowDownLeft className="h-5 w-5 text-accent" />
                       ) : (
