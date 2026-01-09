@@ -270,10 +270,13 @@ export function usePaymentsData() {
         const { error: txError } = await supabase
           .from("transactions")
           .update({ status: "processing" })
-          .eq("metadata->>payment_id", paymentId);
+          .eq("id", existingTx.id);
         
         if (txError) console.error("Transaction update error:", txError);
       }
+
+      // Store transaction ID for the completion update
+      const txId = existingTx?.id;
 
       // Simulate processing and completion after delay
       setTimeout(async () => {
@@ -285,10 +288,19 @@ export function usePaymentsData() {
           })
           .eq("id", paymentId);
         
-        await supabase
+        // Find and update the transaction by querying with the payment reference
+        const { data: txToComplete } = await supabase
           .from("transactions")
-          .update({ status: "completed" })
-          .eq("metadata->>payment_id", paymentId);
+          .select("id")
+          .eq("reference", `PAY-${paymentId.substring(0, 8).toUpperCase()}`)
+          .maybeSingle();
+        
+        if (txToComplete) {
+          await supabase
+            .from("transactions")
+            .update({ status: "completed" })
+            .eq("id", txToComplete.id);
+        }
         
         queryClient.invalidateQueries({ queryKey: ["payments"] });
         queryClient.invalidateQueries({ queryKey: ["transactions"] });
