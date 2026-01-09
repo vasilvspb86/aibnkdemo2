@@ -316,7 +316,7 @@ export default function Settings() {
                       </div>
                     </div>
                     <Button asChild variant="outline" className="gap-2">
-                      <Link to="/onboarding-local/review">
+                      <Link to="/application-summary">
                         Review Application
                         <ArrowRight className="h-4 w-4" />
                       </Link>

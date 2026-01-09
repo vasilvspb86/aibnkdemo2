@@ -32,6 +32,7 @@ import ComplianceTabLocal from "./pages/onboarding/ComplianceTabLocal";
 import DocumentsTabLocal from "./pages/onboarding/DocumentsTabLocal";
 import ReviewTabLocal from "./pages/onboarding/ReviewTabLocal";
 import OnboardingStatus from "./pages/OnboardingStatus";
+import ApplicationSummary from "./pages/ApplicationSummary";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/assistant" element={<Assistant />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/onboarding-status" element={<OnboardingStatus />} />
+                <Route path="/application-summary" element={<ApplicationSummary />} />
               </Route>
 
               {/* Catch all */}
