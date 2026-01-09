@@ -31,6 +31,7 @@ import OwnershipTabLocal from "./pages/onboarding/OwnershipTabLocal";
 import ComplianceTabLocal from "./pages/onboarding/ComplianceTabLocal";
 import DocumentsTabLocal from "./pages/onboarding/DocumentsTabLocal";
 import ReviewTabLocal from "./pages/onboarding/ReviewTabLocal";
+import OnboardingStatus from "./pages/OnboardingStatus";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const App = () => (
                 <Route path="/rewards" element={<Rewards />} />
                 <Route path="/assistant" element={<Assistant />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/onboarding-status" element={<OnboardingStatus />} />
               </Route>
 
               {/* Catch all */}
