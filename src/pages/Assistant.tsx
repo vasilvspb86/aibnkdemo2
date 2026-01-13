@@ -79,16 +79,11 @@ export default function Assistant() {
           { icon: BarChart3, text: "Show me my weekly and monthly spending trends" },
         ];
 
-        // Add invoice suggestion with real client name
-        if (invoices && invoices.length > 0) {
-          const uniqueClients = [...new Set(invoices.map(inv => inv.client_name))];
-          if (uniqueClients[0]) {
-            prompts.push({
-              icon: FileText,
-              text: `Create an invoice for ${uniqueClients[0]} for AED 5,000`,
-            });
-          }
-        }
+        // Add AWS optimization suggestion
+        prompts.push({
+          icon: FileText,
+          text: "Help me optimize my AWS bills",
+        });
 
         // Add payment suggestion with real beneficiary name
         if (beneficiaries && beneficiaries.length > 0) {
