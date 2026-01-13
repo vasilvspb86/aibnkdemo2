@@ -145,7 +145,7 @@ export default function Accounts() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/20">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8 pt-6 border-t border-white/20">
             <div>
               <p className="text-xs opacity-60">Account Number</p>
               <div className="flex items-center gap-2 mt-1">
@@ -183,6 +183,10 @@ export default function Accounts() {
                   </>
                 )}
               </div>
+            </div>
+            <div>
+              <p className="text-xs opacity-60">Overdraft Limit</p>
+              <p className="font-mono text-sm mt-1">AED 10,000</p>
             </div>
             <div>
               <p className="text-xs opacity-60">SWIFT/BIC</p>
