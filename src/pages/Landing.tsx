@@ -38,9 +38,6 @@ const stats = [{
   value: "24/7",
   label: "AI Support"
 }, {
-  value: "0 AED",
-  label: "Monthly Fees"
-}, {
   value: "150+",
   label: "Countries Supported"
 }];
