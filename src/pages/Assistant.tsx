@@ -85,13 +85,6 @@ export default function Assistant() {
           text: "Help me optimize my AWS bills",
         });
 
-        // Add payment suggestion with real beneficiary name
-        if (beneficiaries && beneficiaries.length > 0) {
-          prompts.push({
-            icon: ArrowUpRight,
-            text: `Prepare a payment of AED 2,500 for ${beneficiaries[0].name}`,
-          });
-        }
 
         // Add spending alerts and cards prompts
         prompts.push(
