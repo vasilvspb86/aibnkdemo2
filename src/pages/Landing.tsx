@@ -109,7 +109,7 @@ export default function Landing() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-20 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-20 max-w-3xl mx-auto">
             {stats.map(stat => <Card key={stat.label} className="text-center">
                 <CardContent className="pt-6">
                   <p className="text-3xl font-display font-bold text-primary">{stat.value}</p>
