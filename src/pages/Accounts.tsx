@@ -140,7 +140,10 @@ export default function Accounts() {
             </div>
             {!isLoading && balance !== availableBalance && (
               <p className="text-sm opacity-60 mt-1">
-                Total balance: AED {balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                Total balance: {showBalance 
+                  ? `AED ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                  : "AED ••••••••"
+                }
               </p>
             )}
           </div>
