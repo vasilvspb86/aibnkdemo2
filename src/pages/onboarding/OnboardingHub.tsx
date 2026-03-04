@@ -80,7 +80,7 @@ export default function OnboardingHub() {
             {/* Logo and Status */}
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold tracking-tight">
-                <span className="text-primary">AI</span>BNK
+                <span className="text-primary">Neo</span>Bank
               </h1>
               <Badge variant={status.variant}>{status.label}</Badge>
             </div>

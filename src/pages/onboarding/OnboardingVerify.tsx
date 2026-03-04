@@ -161,7 +161,7 @@ export default function OnboardingVerify() {
         {/* Logo */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-primary">AI</span>BNK
+            <span className="text-primary">Neo</span>Bank
           </h1>
         </div>
 
