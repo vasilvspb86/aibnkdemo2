@@ -89,7 +89,7 @@ export default function Payments() {
   } = usePaymentsData();
 
   const copyLink = (linkCode: string) => {
-    const fullLink = `https://pay.aibnk.com/${linkCode}`;
+    const fullLink = `https://pay.neobank.com/${linkCode}`;
     navigator.clipboard.writeText(fullLink);
     setCopiedLink(linkCode);
     toast.success("Link copied to clipboard");
@@ -805,7 +805,7 @@ export default function Payments() {
                           <p className="font-medium">{link.description}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <code className="text-xs bg-muted px-2 py-0.5 rounded">
-                              pay.aibnk.com/{link.link_code}
+                              pay.neobank.com/{link.link_code}
                             </code>
                             <button 
                               onClick={() => copyLink(link.link_code)}

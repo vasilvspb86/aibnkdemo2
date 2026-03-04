@@ -279,7 +279,7 @@ export default function Assistant() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-2">
-            Powered by AIBNK AI • Actions require confirmation before execution
+            Powered by NeoBank AI • Actions require confirmation before execution
           </p>
         </div>
       </Card>

@@ -44,7 +44,7 @@ export default function SignIn() {
           <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
             <Building2 className="h-5 w-5" />
           </div>
-          <span className="font-display font-bold text-xl">AIBNK</span>
+          <span className="font-display font-bold text-xl">NeoBank</span>
         </Link>
 
         <div className="relative">
@@ -56,7 +56,7 @@ export default function SignIn() {
           </p>
         </div>
 
-        <p className="text-white/60 text-sm relative">© 2026 AIBNK. All rights reserved.</p>
+        <p className="text-white/60 text-sm relative">© 2026 NeoBank. All rights reserved.</p>
       </div>
 
       {/* Right Panel */}
@@ -66,13 +66,13 @@ export default function SignIn() {
             <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl">AIBNK</span>
+            <span className="font-display font-bold text-xl">NeoBank</span>
           </Link>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
-              <CardDescription>Sign in to your AIBNK account</CardDescription>
+              <CardDescription>Sign in to your NeoBank account</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">

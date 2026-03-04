@@ -101,7 +101,7 @@ export default function ResetPassword() {
               <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-display font-bold">AIBNK</span>
+              <span className="text-2xl font-display font-bold">NeoBank</span>
             </div>
             <CardTitle className="text-2xl">Reset your password</CardTitle>
             <CardDescription>

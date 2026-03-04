@@ -61,7 +61,7 @@ export default function Onboarding() {
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-display font-bold text-lg text-sidebar-foreground">AIBNK</h1>
+            <h1 className="font-display font-bold text-lg text-sidebar-foreground">NeoBank</h1>
             <p className="text-xs text-sidebar-foreground/60">Business Banking</p>
           </div>
         </Link>
@@ -387,7 +387,7 @@ export default function Onboarding() {
                   <CardContent className="pt-6">
                     <p className="text-sm text-muted-foreground">
                       By submitting this application, you confirm that all information provided is accurate 
-                      and you agree to AIBNK's Terms of Service and Privacy Policy.
+                      and you agree to NeoBank's Terms of Service and Privacy Policy.
                     </p>
                   </CardContent>
                 </Card>
