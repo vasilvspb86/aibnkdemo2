@@ -7,7 +7,7 @@ export default function Rewards() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl md:text-3xl font-display font-bold">Rewards</h1>
-        <p className="text-muted-foreground mt-1">Earn rewards for using AIBNK.</p>
+        <p className="text-muted-foreground mt-1">Earn rewards for using NeoBank.</p>
       </div>
 
       <Card className="border-dashed">
