@@ -63,7 +63,7 @@ export default function Landing() {
             <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center">
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl">AIBNK</span>
+            <span className="font-display font-bold text-xl">NeoBank</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
@@ -128,7 +128,7 @@ export default function Landing() {
               Everything your business needs
             </h2>
             <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-              From day-to-day operations to growth financing, AIBNK provides the complete 
+              From day-to-day operations to growth financing, NeoBank provides the complete 
               financial toolkit for modern SMEs.
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function Landing() {
                   Ready to transform your business banking?
                 </h2>
                 <p className="text-white/80 mt-4 max-w-xl mx-auto">
-                  Join thousands of SMEs who trust AIBNK for their financial operations. 
+                  Join thousands of SMEs who trust NeoBank for their financial operations. 
                   No paperwork, no waiting.
                 </p>
                 <Link to="/onboarding">
@@ -181,14 +181,14 @@ export default function Landing() {
               <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Building2 className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-display font-bold">AIBNK</span>
+              <span className="font-display font-bold">NeoBank</span>
             </div>
             <div className="flex gap-8 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
               <a href="#" className="hover:text-foreground transition-colors">Terms</a>
               <a href="#" className="hover:text-foreground transition-colors">Contact</a>
             </div>
-            <p className="text-sm text-muted-foreground">© 2026 AIBNK. All rights reserved.</p>
+            <p className="text-sm text-muted-foreground">© 2026 NeoBank. All rights reserved.</p>
           </div>
         </div>
       </footer>
