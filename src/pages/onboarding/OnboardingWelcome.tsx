@@ -58,7 +58,7 @@ export default function OnboardingWelcome() {
             className={`text-3xl font-bold tracking-tight ${user ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             onClick={handleLogoClick}
           >
-            <span className="text-primary">AI</span>BNK
+            <span className="text-primary">Neo</span>Bank
           </h1>
         </div>
 

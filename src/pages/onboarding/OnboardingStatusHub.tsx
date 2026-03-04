@@ -133,7 +133,7 @@ export default function OnboardingStatusHub() {
         <div className="container max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold tracking-tight">
-              <span className="text-primary">AI</span>BNK
+              <span className="text-primary">Neo</span>Bank
             </h1>
             <Button variant="ghost" size="sm">
               <HelpCircle className="w-4 h-4 mr-2" />
